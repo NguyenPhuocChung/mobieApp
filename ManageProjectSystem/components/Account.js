@@ -22,6 +22,7 @@ import {
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { fetchAccount, updateAccount } from "../api/accountService";
 import URL from "../midleware/authMidleware";
+import URL from "../midleware/authMidleware";
 
 const AccountDetail = () => {
   const [image, setImage] = useState(null);
@@ -50,47 +51,55 @@ const AccountDetail = () => {
       const idUser = await AsyncStorage.getItem("userId");
       console.log(idUser);
 
-      if (idUser) setId(idUser);
+      if (idUser) {
+        setId(idUser);
+      } else {
+        setError("User ID is not available");
+      }
     } catch (error) {
       console.log("Error fetching data from AsyncStorage", error);
+      setError("Error fetching user ID from AsyncStorage");
     }
   };
 
   const fetchData = async () => {
-    console.log(id);
-    if (id) {
-      try {
-        const accountData = await fetchAccount(id);
-        setAccount(accountData);
-        setUpdatedAccount({
-          fullName: accountData.fullName || null,
-          birthDate: accountData.birthDate || null,
-          address: accountData.address || null,
-          phone: accountData.phone || null,
-          email: accountData.email || null,
-          position: accountData.position || null,
-          role: accountData.role || null,
-          department: accountData.department || null,
-          startDate: accountData.startDate || null,
-          salary: accountData.salary || null,
-          avatar: accountData.avatar,
-          workHistory: accountData.workHistory || [],
-        });
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+    if (!id) {
+      setError("Invalid ID for fetching account data");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const accountData = await fetchAccount(id);
+      setAccount(accountData);
+      setUpdatedAccount({
+        fullName: accountData.fullName || null,
+        birthDate: accountData.birthDate || null,
+        address: accountData.address || null,
+        phone: accountData.phone || null,
+        email: accountData.email || null,
+        position: accountData.position || null,
+        role: accountData.role || null,
+        department: accountData.department || null,
+        startDate: accountData.startDate || null,
+        salary: accountData.salary || null,
+        avatar: accountData.avatar,
+        workHistory: accountData.workHistory || [],
+      });
+      setError(null); // Clear any existing errors
+    } catch (err) {
+      setError(`Error fetching account data: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+      fetchData();
+    }, [id])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -128,7 +137,7 @@ const AccountDetail = () => {
       setVisible(false);
       setError(null); // Clear error if successful
     } catch (err) {
-      setError(err.message);
+      setError(`Error updating account: ${err.message}`);
     }
   };
 
@@ -177,6 +186,15 @@ const AccountDetail = () => {
 
   if (loading) {
     return <ActivityIndicator size="large" color="#6200ee" />;
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Button onPress={onRefresh}>Try Again</Button>
+      </View>
+    );
   }
 
   return (
@@ -263,12 +281,11 @@ const styles = StyleSheet.create({
     padding: 16,
     height: "100%",
   },
-  card: {
-    marginBottom: 16,
-    borderRadius: 10,
-    backgroundColor: "#ffffff",
-    padding: 16,
-    height: "100%",
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
   avatarContainer: {
     alignItems: "center",
@@ -307,10 +324,10 @@ const styles = StyleSheet.create({
   textInput: {
     marginBottom: 16,
   },
-  noHistoryText: {
+  errorText: {
+    color: "red",
     textAlign: "center",
-    marginTop: 16,
-    fontStyle: "italic",
+    margin: 20,
   },
   detailContainer: {
     flexDirection: "row",
@@ -319,18 +336,6 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontWeight: "bold",
-  },
-  subTitle: {
-    fontSize: 18,
-    marginBottom: 8,
-  },
-  workHistory: {
-    marginBottom: 8,
-  },
-  errorText: {
-    color: "red",
-    textAlign: "center",
-    margin: 20,
   },
 });
 
