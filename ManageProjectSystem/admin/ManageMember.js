@@ -2,16 +2,19 @@ import React, { useEffect, useState } from "react";
 import {
   Button,
   FlatList,
+  Image,
   Modal,
   RefreshControl,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import Generate from "../CSS/Generate";
-import { deleteAccount, getAllAccounts } from "../api/apiservice"; // Import your API functions
+import { deleteAccount, getAllAccounts } from "../api/accountService"; // Import your API functions
+import URL from "../midleware/authMidleware";
 
 const MemberManagement = ({ navigation }) => {
   const [members, setMembers] = useState([]);
@@ -25,12 +28,16 @@ const MemberManagement = ({ navigation }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true); // Trạng thái loading
   const [refreshing, setRefreshing] = useState(false); // Trạng thái refreshing
+
+  // Hàm xóa thành viên
   const handleDeleteMember = async () => {
     try {
       await deleteAccount(memberToDelete);
-      setMembers(members.filter((member) => member._id !== memberToDelete));
-      setFilteredMembers(
-        filteredMembers.filter((member) => member._id !== memberToDelete)
+      setMembers((prevMembers) =>
+        prevMembers.filter((member) => member._id !== memberToDelete)
+      );
+      setFilteredMembers((prevFilteredMembers) =>
+        prevFilteredMembers.filter((member) => member._id !== memberToDelete)
       );
       setConfirmationModalVisible(false);
     } catch (err) {
@@ -38,6 +45,7 @@ const MemberManagement = ({ navigation }) => {
     }
   };
 
+  // Hàm tìm kiếm thành viên
   const handleSearch = (query) => {
     setSearchQuery(query);
     if (query) {
@@ -52,6 +60,7 @@ const MemberManagement = ({ navigation }) => {
     }
   };
 
+  // Hàm lấy danh sách thành viên
   const fetchMembers = async () => {
     setLoading(true);
     setRefreshing(true);
@@ -66,6 +75,7 @@ const MemberManagement = ({ navigation }) => {
       setRefreshing(false);
     }
   };
+
   useEffect(() => {
     fetchMembers();
   }, []);
@@ -122,6 +132,7 @@ const MemberManagement = ({ navigation }) => {
         }
       />
 
+      {/* Modal xác nhận xóa */}
       <Modal
         visible={confirmationModalVisible}
         transparent={true}
@@ -149,6 +160,7 @@ const MemberManagement = ({ navigation }) => {
         </View>
       </Modal>
 
+      {/* Modal hiển thị thông tin thành viên */}
       {selectedMember && (
         <Modal
           visible={modalVisible}
@@ -156,17 +168,50 @@ const MemberManagement = ({ navigation }) => {
           onRequestClose={() => setModalVisible(false)}
         >
           <View style={styles.modalContent}>
-            <Text>Full Name: {selectedMember.fullName}</Text>
-            <Text>Email: {selectedMember.email}</Text>
-            <Text>Role: {selectedMember.role}</Text>
-            <Text>Phone: {selectedMember.phone || "null"}</Text>
-            <Text>Address: {selectedMember.address || "null"}</Text>
-            <Text>Birth Date: {selectedMember.birthDate || "null"}</Text>
-            <Text>Department: {selectedMember.department || "null"}</Text>
-            <Text>Position: {selectedMember.position || "null"}</Text>
-            <Text>Salary: {selectedMember.salary || "null"}</Text>
-            <Text>Start Date: {selectedMember.startDate || "null"}</Text>
-            <Button title="Close" onPress={() => setModalVisible(false)} />
+            {selectedMember?.avatar && (
+              <Image
+                source={{
+                  uri: `http://${URL.BASE_URL}:5000/${selectedMember.avatar}`,
+                }}
+                style={styles.avatar}
+              />
+            )}
+            <Text style={styles.infoText}>
+              Full Name: {selectedMember.fullName || "null"}
+            </Text>
+            <Text style={styles.infoText}>
+              Email: {selectedMember.email || "null"}
+            </Text>
+            <Text style={styles.infoText}>
+              Role: {selectedMember.role || "null"}
+            </Text>
+            <Text style={styles.infoText}>
+              Phone: {selectedMember.phone || "null"}
+            </Text>
+            <Text style={styles.infoText}>
+              Address: {selectedMember.address || "null"}
+            </Text>
+            <Text style={styles.infoText}>
+              Birth Date: {selectedMember.birthDate || "null"}
+            </Text>
+            <Text style={styles.infoText}>
+              Department: {selectedMember.department || "null"}
+            </Text>
+            <Text style={styles.infoText}>
+              Position: {selectedMember.position || "null"}
+            </Text>
+            <Text style={styles.infoText}>
+              Salary: {selectedMember.salary || "null"}
+            </Text>
+            <Text style={styles.infoText}>
+              Start Date: {selectedMember.startDate || "null"}
+            </Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
           </View>
         </Modal>
       )}
@@ -218,6 +263,57 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 15,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+
+  modalContent: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    padding: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5, // Chỉ cho Android
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50, // Tạo hình tròn cho avatar
+    marginBottom: 20,
+  },
+  infoText: {
+    fontSize: 16,
+    marginVertical: 5,
+    color: "#333",
+    fontWeight: "500", // Chữ đậm hơn
+  },
+  closeButton: {
+    marginTop: 20,
+    backgroundColor: "#007BFF", // Màu nền cho nút Close
+    borderRadius: 5,
+    padding: 10,
+    width: "100%", // Chiếm toàn bộ chiều rộng
+  },
+  closeButtonText: {
+    color: "#ffffff",
+    textAlign: "center",
+    fontWeight: "bold",
   },
 });
 

@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,6 +14,20 @@ const Home = () => {
   const navigation = useNavigation();
   const lineWidth = useRef(new Animated.Value(0)).current; // Khởi tạo Animated.Value
 
+  // Dữ liệu cho FlatList
+  const sections = [
+    {
+      title: "Notification",
+      icon: "notifications",
+      navigateTo: "Notification",
+    },
+    {
+      title: "Task",
+      icon: "briefcase",
+      navigateTo: "TaskMember",
+    },
+  ];
+
   useEffect(() => {
     // Bắt đầu animation khi component được mount
     Animated.timing(lineWidth, {
@@ -22,20 +37,29 @@ const Home = () => {
     }).start();
   }, [lineWidth]);
 
+  const renderSection = ({ item }) => (
+    <Section title={item.title}>
+      <IconCard
+        onPress={() =>
+          navigation.navigate(item.navigateTo, { name: item.navigateTo })
+        }
+        icon={item.icon}
+        title={item.title}
+      />
+    </Section>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.main}>
-        <Section title="Notification">
-          <IconCard
-            onPress={() =>
-              navigation.navigate("Notification", {
-                name: "Notification",
-              })
-            }
-            icon="notifications"
-            title="Notification"
-          />
-        </Section>
+        {/* Sử dụng FlatList để hiển thị danh sách các phần */}
+        <FlatList
+          data={sections}
+          renderItem={renderSection}
+          keyExtractor={(item) => item.title} // Sử dụng title làm key
+          showsVerticalScrollIndicator={false} // Ẩn thanh cuộn dọc
+        />
+
         {/* Đường kẻ ngang với animation */}
         <Animated.View
           style={[
@@ -48,17 +72,6 @@ const Home = () => {
             },
           ]}
         />
-        <Section title="Task and Rank">
-          <IconCard
-            icon="briefcase"
-            title="List Task"
-            onPress={() =>
-              navigation.navigate("TaskMember", {
-                name: "TaskMember",
-              })
-            } // Điều hướng đến Manager Project
-          />
-        </Section>
       </View>
     </View>
   );

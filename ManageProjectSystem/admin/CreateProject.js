@@ -1,20 +1,26 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import * as DocumentPicker from "expo-document-picker";
 import React, { useEffect, useState } from "react";
+
 import {
+  Alert,
   Image,
   ScrollView,
   Text,
   TextInput,
   TouchableHighlight,
+  TouchableOpacity,
   View,
 } from "react-native";
+
 import Dialog from "react-native-dialog";
 import { Dropdown } from "react-native-element-dropdown";
 import { SafeAreaView } from "react-native-safe-area-context";
 import GenerateStyles from "../CSS/Generate";
 import styles from "../CSS/ManageTask";
-import { createProject } from "../api/apiservice";
+import { getAllAccounts } from "../api/accountService";
+import { createProject } from "../api/projectService";
 
 const CreateProject = () => {
   const [title, setTitle] = useState(null);
@@ -22,7 +28,9 @@ const CreateProject = () => {
   const [invite, setValue_invite] = useState(null);
   const [labels, setValue_labels] = useState(null);
   const [createrBy, setId] = useState(null);
-  const [status, setStatus] = useState("Ônging");
+  const [status, setStatus] = useState("Not started");
+  const [fileName, setFileName] = useState("");
+  const [load, setLoad] = useState("");
 
   const getID = async () => {
     const data = await AsyncStorage.getItem("userId");
@@ -42,11 +50,13 @@ const CreateProject = () => {
   const [startTime, setStartTime] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date());
-
+  const [invitePeople, setInvitePeople] = useState([]);
+  //
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  //
   const [successVisible, setSuccessVisible] = useState(false);
   const [errorVisible, setErrorVisible] = useState(false);
   ////////////////////////////////////////////////////////////////
@@ -82,36 +92,39 @@ const CreateProject = () => {
     setEndTime(currentTime);
   };
 
+  const getAccount = async () => {
+    try {
+      // Gửi yêu cầu POST đến API
+      const response = await getAllAccounts();
+      console.log(response); // Log the entire response for debugging
+
+      // Kiểm tra xem response có tồn tại không và nếu nó là một mảng
+      if (Array.isArray(response)) {
+        // Gán mảng invitePeople
+        const data = response.map((account) => ({
+          label: account.fullName || "Not update profile", // Use fullName, provide a fallback
+          value: account._id, // Using _id as value
+        }));
+        setInvitePeople(data); // Cập nhật state invitePeople
+      } else {
+        console.error("Unexpected response format:", response);
+        setErrorVisible(true);
+      }
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+      setErrorVisible(true);
+    }
+  };
+
+  useEffect(() => {
+    getAccount();
+  }, []);
   //////////////////////////////////
-  const invitePeople = [
-    { label: "phuoc chung", value: "1" },
-    { label: "Item 2", value: "67120e2ba149e5e80befa0ca" },
-    { label: "Item 3", value: "3" },
-    { label: "Item 4", value: "4" },
-    { label: "Item 5", value: "5" },
-    { label: "Item 6", value: "6" },
-    { label: "Item 7", value: "7" },
-    { label: "Item 8", value: "8" },
-  ];
+
   const Labels = [
-    { label: "phuoc chung", value: "1" },
-    { label: "Item 2", value: "2" },
-    { label: "Item 3", value: "3" },
-    { label: "Item 4", value: "4" },
-    { label: "Item 5", value: "5" },
-    { label: "Item 6", value: "6" },
-    { label: "Item 7", value: "7" },
-    { label: "Item 8", value: "8" },
-  ];
-  const NameProject = [
-    { label: "phuoc chung", value: "1" },
-    { label: "Item 2", value: "2" },
-    { label: "Item 3", value: "3" },
-    { label: "Item 4", value: "4" },
-    { label: "Item 5", value: "5" },
-    { label: "Item 6", value: "6" },
-    { label: "Item 7", value: "7" },
-    { label: "Item 8", value: "8" },
+    { label: "Hard", value: "hard" },
+    { label: "Medium", value: "medium" },
+    { label: "Easy", value: "easy" },
   ];
 
   const handleClose = () => {
@@ -146,10 +159,66 @@ const CreateProject = () => {
     );
   };
 
-  const handleSubmit = async () => {
-    // Tạo đối tượng dữ liệu từ các state
-    console.log("createrBy", createrBy);
+  // const handleSubmit = async () => {
+  //   // Tạo đối tượng dữ liệu từ các state
+  //   console.log("createrBy", createrBy);
 
+  //   const data = {
+  //     title,
+  //     description,
+  //     startDate: startDate.toISOString(),
+  //     startTime: startTime.toISOString(), // Chuyển đổi thời gian thành chuỗi ISO
+  //     endDate: endDate.toISOString(), // Chuyển đổi thành chuỗi ISO
+  //     endTime: endTime.toISOString(), // Chuyển đổi thành chuỗi ISO
+  //     invite,
+  //     labels,
+  //     status,
+  //     createrBy,
+  //   };
+
+  //   try {
+  //     // Gửi yêu cầu POST đến API
+  //     const response = await createProject(data);
+  //     setSuccessVisible(true);
+
+  //     console.log(response.data);
+  //   } catch (error) {
+  //     console.error(error);
+  //     setErrorVisible(true);
+  //   }
+  // };
+  // get img
+  const handleFileUpload = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*", // Chọn mọi loại file
+        copyToCacheDirectory: false,
+      });
+
+      console.log(result); // Kiểm tra kết quả trả về
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedFile = result.assets[0]; // Lấy file đầu tiên
+
+        // Hiển thị tên và loại file đã chọn
+        setFileName(selectedFile);
+        Alert.alert(
+          "Đã chọn file: " + selectedFile.name,
+          "Loại file: " + selectedFile.mimeType
+        );
+
+        // Xử lý tải lên hoặc mở file ở đây, ví dụ: tải lên server hoặc lưu tạm
+        console.log("URI file:", selectedFile.uri);
+      } else {
+        Alert.alert("Người dùng đã hủy chọn file");
+      }
+    } catch (error) {
+      console.error("Error picking document:", error);
+      Alert.alert("Có lỗi xảy ra khi chọn file");
+    }
+  };
+  //
+  const handleSubmit = async () => {
     const data = {
       title,
       description,
@@ -163,15 +232,24 @@ const CreateProject = () => {
       createrBy,
     };
 
+    const formData = new FormData();
+    formData.append("data", JSON.stringify(data)); // Stringify the data object
+    // Nếu có file, thêm file vào FormData
+    if (fileName) {
+      formData.append("file", {
+        uri: fileName.uri,
+        name: fileName.name,
+        type: fileName.mimeType,
+      });
+    }
     try {
-      // Gửi yêu cầu POST đến API
-      const response = await createProject(data);
-      setSuccessVisible(true);
-
-      console.log(response.data);
+      await createProject(formData); // Gọi API với formData
+      Alert.alert("Submit success!");
+      setLoad(true);
     } catch (error) {
-      console.error(error);
-      setErrorVisible(true);
+      console.error("Error submitting assignment:", error);
+      setLoad(false);
+      Alert.alert("Lỗi khi nộp bài!");
     }
   };
   return (
@@ -210,57 +288,13 @@ const CreateProject = () => {
               { backgroundColor: "#F5F5F5" },
             ]}
           >
-            <View style={styles.d_flex}>
-              <Text
-                style={[
-                  styles.color,
-                  styles.bold_word,
-                  styles.margin_left,
-                  styles.font_size,
-                  styles.box_control_content_task,
-                ]}
-              >
-                B
-              </Text>
-              <Text
-                style={[
-                  styles.color,
-                  styles.margin_left,
-                  styles.font_size,
-                  styles.box_control_content_task,
-                ]}
-              >
-                A
-              </Text>
-              <Text
-                style={[
-                  styles.color,
-                  styles.italic,
-                  styles.margin_left,
-                  styles.font_size,
-                  styles.box_control_content_task,
-                ]}
-              >
-                I
-              </Text>
-              <Text
-                style={[
-                  styles.color,
-                  styles.underline,
-                  styles.margin_left,
-                  styles.font_size,
-                  styles.box_control_content_task,
-                ]}
-              >
-                U
-              </Text>
-            </View>
-            <View>
+            <View style={styles.d_flex}></View>
+            <TouchableOpacity onPress={handleFileUpload}>
               <Image
                 style={styles.import_img}
                 source={require("../img/folder-plus.png")}
               />
-            </View>
+            </TouchableOpacity>
           </View>
           <View>
             <TextInput
@@ -271,6 +305,7 @@ const CreateProject = () => {
               value={description}
               onChangeText={(description) => setDescription(description)}
             />
+            <Text> {fileName.name}</Text>
           </View>
           <View>
             <View
@@ -395,7 +430,7 @@ const CreateProject = () => {
                     width: "auto",
                   }}
                 >
-                  <View>
+                  <TouchableOpacity>
                     <TextInput
                       style={{
                         width: 120,
@@ -413,7 +448,7 @@ const CreateProject = () => {
                         onChange={onChangeStartDate}
                       />
                     )}
-                  </View>
+                  </TouchableOpacity>
                   <Text
                     style={{
                       width: 1,

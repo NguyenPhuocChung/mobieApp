@@ -18,21 +18,34 @@ import HomeMember from "../member/home";
 const Member = () => {
   const navigation = useNavigation();
   const [id, setId] = useState(null);
-  const [data, setData] = useState("");
+  const [data, setData] = useState(null); // Đặt giá trị mặc định là null
   const [modalVisible, setModalVisible] = useState(false); // Trạng thái modal
 
   const loadData = async () => {
     try {
       const idUser = await AsyncStorage.getItem("userId");
-      if (idUser) setId(idUser);
+      if (idUser) {
+        setId(idUser);
+      }
     } catch (error) {
       console.log("Error fetching data from AsyncStorage", error);
     }
   };
 
   const fetch = async () => {
-    const accountData = await fetchAccount(id);
-    setData(accountData);
+    if (id) {
+      // Chỉ gọi khi id đã được thiết lập
+      try {
+        const accountData = await fetchAccount(id);
+        setData(accountData);
+      } catch (error) {
+        Alert.alert(
+          "Error",
+          "Failed to fetch account data. Please try again later."
+        );
+        console.error("Error fetching account data:", error);
+      }
+    }
   };
 
   useEffect(() => {
@@ -42,14 +55,13 @@ const Member = () => {
   useEffect(() => {
     fetch(); // Gọi fetch sau khi id đã được tải
   }, [id]);
+
   const handleLogout = async () => {
     try {
       // Xóa các thông tin đã lưu trong AsyncStorage
       await AsyncStorage.removeItem("userEmail");
       await AsyncStorage.removeItem("userRole");
       await AsyncStorage.removeItem("userPassword");
-
-      // Reset các state để không tự động đăng nhập lại
 
       console.log("Signed out");
       // Chuyển hướng về màn hình Login
@@ -71,7 +83,7 @@ const Member = () => {
         },
         {
           text: "Yes",
-          onPress: () => handleLogout(),
+          onPress: handleLogout,
         },
       ],
       { cancelable: false }
@@ -88,9 +100,6 @@ const Member = () => {
         <Ionicons name="log-out-outline" size={20} color="#4CAF50" />
         <Text style={styles.menuItem}>Signout</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => setModalVisible(false)}>
-        <Text style={styles.closeModal}>Close</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -104,15 +113,15 @@ const Member = () => {
 
         <View style={styles.titleContainer}>
           <Ionicons name="people-outline" size={24} style={styles.icon} />
-          <Text style={styles.projectTitle}>{data.fullName}</Text>
+          <Text style={styles.projectTitle}>
+            {data ? data.fullName : "Loading..."}
+          </Text>
         </View>
 
         <TouchableOpacity>
           {data && data.avatar && (
             <Image
-              source={{
-                uri: `http://192.168.1.3:5000/${data.avatar}`,
-              }}
+              source={{ uri: `http://192.168.1.3:5000/${data.avatar}` }}
               style={styles.avatar}
             />
           )}
@@ -126,9 +135,7 @@ const Member = () => {
         animationType="fade"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => {
-          setModalVisible(false); // Đặt modal thành không hiển thị
-        }}
+        onRequestClose={() => setModalVisible(false)} // Đặt modal thành không hiển thị
       >
         <TouchableOpacity
           style={styles.modalBackground}

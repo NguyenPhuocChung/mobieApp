@@ -1,41 +1,61 @@
+import DateTimePicker from "@react-native-community/datetimepicker"; // Import DateTimePicker
 import { useNavigation, useRoute } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
   Button,
+  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from "react-native";
+import { Dropdown } from "react-native-element-dropdown";
+import { getAllAccounts } from "../api/accountService"; // Ensure this import exists
 import { editTaskById, fetchTaskById } from "../api/apiservice"; // API service for fetching and updating task details
+import GenerateStyles from "../CSS/Generate";
 
 const EditTask = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { item } = route.params; // Get task ID from route params
+  const { item } = route.params;
   const taskId = item._id;
-  // State variables for task details
+
   const [taskTitle, setTaskTitle] = useState("");
+  const [invitePeople, setInvitePeople] = useState([]);
   const [taskDescription, setTaskDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isFocusInvite, setIsFocusInvite] = useState(false);
+  const [invite, setInvite] = useState(null);
 
-  // Fetch task details when the component is mounted
+  const renderInvite = () => (
+    <Text
+      style={[
+        styles.label,
+        GenerateStyles.bold,
+        isFocusInvite && { color: "blue" },
+      ]}
+    >
+      Invite
+    </Text>
+  );
+
   useEffect(() => {
     const fetchTask = async () => {
       try {
         const taskDetails = await fetchTaskById(taskId);
-        console.log("task detail for " + taskDetails);
-
         setTaskTitle(taskDetails.title);
         setTaskDescription(taskDetails.description);
-        setStartDate(taskDetails.startDate);
-        setEndDate(taskDetails.endDate);
+        setStartDate(new Date(taskDetails.startDate));
+        setEndDate(new Date(taskDetails.endDate));
         setStatus(taskDetails.status);
         setLoading(false);
       } catch (err) {
@@ -47,26 +67,61 @@ const EditTask = () => {
     fetchTask();
   }, [taskId]);
 
-  // Function to handle task update
+  const getAccount = async () => {
+    try {
+      const response = await getAllAccounts();
+      console.log(response);
+
+      if (Array.isArray(response)) {
+        const data = response.map((account) => ({
+          label: account.fullName || "Not update profile",
+          value: account._id,
+        }));
+        setInvitePeople(data);
+      } else {
+        console.error("Unexpected response format:", response);
+        setError("Failed to load accounts");
+      }
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+      setError("Error fetching accounts");
+    }
+  };
+
+  useEffect(() => {
+    getAccount();
+  }, []);
+
   const handleUpdateTask = async () => {
     try {
       const updatedTask = {
         title: taskTitle,
         description: taskDescription,
-        startDate,
-        endDate,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
         status,
       };
-      await editTaskById(taskId, updatedTask); // Update task details through API
+      await editTaskById(taskId, updatedTask);
       Alert.alert("Success", "Task updated successfully!");
-      navigation.goBack(); // Navigate back after updating
+      navigation.goBack();
     } catch (err) {
       setError(err.message);
       Alert.alert("Error", "Failed to update task.");
     }
   };
 
-  // Form for editing the task details
+  const onChangeStartDate = (event, selectedDate) => {
+    const currentDate = selectedDate || startDate;
+    setShowStartPicker(false);
+    setStartDate(currentDate);
+  };
+
+  const onChangeEndDate = (event, selectedDate) => {
+    const currentDate = selectedDate || endDate;
+    setShowEndPicker(false);
+    setEndDate(currentDate);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollView}>
@@ -91,22 +146,67 @@ const EditTask = () => {
               multiline
             />
 
-            <Text style={styles.label}>Start Date</Text>
-            <TextInput
-              style={styles.input}
-              value={startDate}
-              onChangeText={setStartDate}
-              placeholder="YYYY-MM-DD"
+            <Button
+              title="Select Start Date"
+              onPress={() => setShowStartPicker(true)}
             />
+            <Text>{startDate.toLocaleDateString()}</Text>
+            {showStartPicker && (
+              <DateTimePicker
+                value={startDate}
+                mode="date"
+                display="default"
+                onChange={onChangeStartDate}
+              />
+            )}
 
-            <Text style={styles.label}>End Date</Text>
-            <TextInput
-              style={styles.input}
-              value={endDate}
-              onChangeText={setEndDate}
-              placeholder="YYYY-MM-DD"
+            <Button
+              title="Select End Date"
+              onPress={() => setShowEndPicker(true)}
             />
+            <Text>{endDate.toLocaleDateString()}</Text>
+            {showEndPicker && (
+              <DateTimePicker
+                value={endDate}
+                mode="date"
+                display="default"
+                onChange={onChangeEndDate}
+              />
+            )}
 
+            <View>
+              {renderInvite()}
+              <Dropdown
+                style={[
+                  styles.dropdown,
+                  isFocusInvite && { borderColor: "blue" },
+                ]}
+                placeholderStyle={styles.placeholderStyle}
+                selectedTextStyle={styles.selectedTextStyle}
+                inputSearchStyle={styles.inputSearchStyle}
+                iconStyle={styles.iconStyle}
+                data={invitePeople}
+                search
+                maxHeight={300}
+                labelField="label"
+                valueField="value"
+                placeholder={!isFocusInvite ? "Invite" : "..."}
+                searchPlaceholder="Search..."
+                value={invite}
+                onFocus={() => setIsFocusInvite(true)}
+                onBlur={() => setIsFocusInvite(false)}
+                onChange={(item) => {
+                  setInvite(item.value);
+                  setIsFocusInvite(false);
+                }}
+                renderLeftIcon={() => (
+                  <Image
+                    source={require("../img/invite.png")}
+                    style={{ width: 12.67, height: 14 }}
+                  />
+                )}
+              />
+            </View>
             <Text style={styles.label}>Status</Text>
             <TextInput
               style={styles.input}
@@ -114,7 +214,6 @@ const EditTask = () => {
               onChangeText={setStatus}
               placeholder="Enter task status"
             />
-
             <Button title="Update Task" onPress={handleUpdateTask} />
             {error && <Text style={styles.errorText}>{error}</Text>}
           </>
@@ -123,6 +222,7 @@ const EditTask = () => {
     </SafeAreaView>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -138,14 +238,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     padding: 10,
-    marginBottom: 12,
+    marginBottom: 16,
+    borderRadius: 5,
+  },
+  scrollView: {
+    paddingBottom: 20,
   },
   errorText: {
     color: "red",
-    marginTop: 8,
+    marginTop: 10,
   },
-  scrollView: {
-    flexGrow: 1,
+  dropdown: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    padding: 8,
+    marginBottom: 16,
+  },
+  placeholderStyle: {
+    color: "#999",
+  },
+  selectedTextStyle: {
+    color: "#333",
+  },
+  inputSearchStyle: {
+    color: "#000",
+  },
+  iconStyle: {
+    width: 20,
+    height: 20,
   },
 });
+
 export default EditTask;

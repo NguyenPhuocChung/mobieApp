@@ -14,7 +14,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -22,21 +21,33 @@ import {
   View,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
-import { addComment, fetchComment } from "../api/apiservice";
+import { addComment, fetchComment } from "../api/commentService";
+import { fetchTaskByID } from "../api/taskService";
 import Generate from "../CSS/Generate";
 import stylesTask from "../CSS/ManageTask"; // Giữ styles từ file CSS/JS
 const CommentSystem = () => {
   const [description, setDescription] = useState("");
   const [data, setData] = useState([]); // Initialize as an empty array
+  const [tasks, setTask] = useState([]);
+  const taskData = data[0]; // hoặc bạn có thể thay đổi chỉ số để lấy phần tử khác
+  const task = taskData ? taskData.tasksId : null;
   const route = useRoute();
   const { tasksId } = route.params;
   const [id, setId] = useState(null);
   const [fileName, setFileName] = useState("");
+
   const [load, setLoad] = useState("");
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString(); // Định dạng ngày
+  };
+
+  const formatTime = (time) => {
+    return new Date(time).toLocaleTimeString(); // Định dạng giờ
+  };
   const getID = async () => {
-    const data = await AsyncStorage.getItem("userId");
-    if (data !== null) {
-      setId(data);
+    const id = await AsyncStorage.getItem("userId");
+    if (id !== null) {
+      setId(id);
     } else {
       console.log("No userId found in AsyncStorage");
     }
@@ -78,6 +89,9 @@ const CommentSystem = () => {
       Alert.alert("Có lỗi xảy ra khi chọn file");
     }
   };
+  //
+
+  //
 
   const handleSubmit = async () => {
     const formData = new FormData();
@@ -104,12 +118,26 @@ const CommentSystem = () => {
       Alert.alert("Lỗi khi nộp bài!");
     }
   };
+  const getTaskByID = async () => {
+    try {
+      const response = await fetchTaskByID(tasksId);
+      // Fetch user data for each comment if needed
+      setTask(response);
+    } catch (error) {
+      Alert.alert("Error", "Failed to fetch comments: " + error.message);
+      console.error(error);
+    }
+  };
+  useEffect(() => {
+    getTaskByID();
+  }, [load]);
+
   ///////// getComment
   const getComment = async () => {
     try {
       const response = await fetchComment(tasksId);
       // Fetch user data for each comment if needed
-      console.log("data", response);
+
       setData(response);
     } catch (error) {
       Alert.alert("Error", "Failed to fetch comments: " + error.message);
@@ -186,127 +214,150 @@ const CommentSystem = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
     >
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        {/* Show comments */}
-        <FlatList
-          data={data}
-          renderItem={renderItem}
-          keyExtractor={(item) => item._id}
-          ListEmptyComponent={
-            <View>
-              <Text style={[Generate.textCenter]}>
-                <Icon name="comment-o" size={100} color="#FF0000" />
+      {/* Show comments */}
+      <View style={styles.container}>
+        {tasks && (
+          <View style={styles.taskContainer}>
+            <Text style={styles.title}>{tasks.title}</Text>
+            <Text style={styles.description}>
+              Description: {tasks.description}
+            </Text>
+            <View style={[Generate.d_flex_align_center, { gap: 10 }]}>
+              <Text style={[styles.detail, { color: "#67166E" }]}>
+                {formatDate(tasks.startDate)}
               </Text>
-              <Text
-                style={[
-                  Generate.bold,
-                  Generate.textCenter,
-                  Generate.marginVertical,
-                ]}
-              >
-                No comments found!
+              <Icon name="arrow-right" size={10} color="#000" />
+              <Text style={[styles.detail, { color: "#67166E" }]}>
+                {formatDate(tasks.endDate)}
               </Text>
-            </View>
-          }
-        />
 
-        {/* Input description */}
-        <View style={[stylesTask.margin_Horizontal, { flex: 1 }]}>
-          <View
-            style={{ flex: 1, justifyContent: "flex-end", marginBottom: 100 }}
-          >
-            <View
-              style={[
-                stylesTask.control_content_task,
-                { backgroundColor: "#F5F5F5" },
-              ]}
-            >
-              <View style={stylesTask.d_flex}>
-                {/* Control Icons */}
-                <Text
-                  style={[
-                    stylesTask.color,
-                    stylesTask.bold_word,
-                    stylesTask.margin_left,
-                  ]}
-                >
-                  B
-                </Text>
-                <Text style={[stylesTask.color, stylesTask.margin_left]}>
-                  A
-                </Text>
-                <Text
-                  style={[
-                    stylesTask.color,
-                    stylesTask.italic,
-                    stylesTask.margin_left,
-                  ]}
-                >
-                  I
-                </Text>
-                <Text
-                  style={[
-                    stylesTask.color,
-                    stylesTask.underline,
-                    stylesTask.margin_left,
-                  ]}
-                >
-                  U
-                </Text>
-              </View>
-              <TouchableOpacity onPress={handleFileUpload}>
-                <Image
-                  style={stylesTask.import_img}
-                  source={require("../img/folder-plus.png")}
-                />
-              </TouchableOpacity>
+              <Text style={[styles.detail, { color: "#67166E" }]}>
+                {formatTime(tasks.startTime)}
+              </Text>
+              <Icon name="arrow-right" size={10} color="#000" />
+              <Text style={[styles.detail, { color: "#67166E" }]}>
+                {formatTime(tasks.endTime)}
+              </Text>
             </View>
-            <View>
-              <TextInput
-                style={[
-                  stylesTask.text_create_task,
-                  stylesTask.font_size_content,
-                ]}
-                placeholder="Description"
-                multiline
-                numberOfLines={4}
-                value={description} // Bind description state
-                onChangeText={setDescription} // Update state
+            <View style={[Generate.d_flex_align_center, { gap: 10 }]}>
+              <Text style={styles.detail}>Status: {tasks.status}</Text>
+              <Text style={styles.detail}>
+                Created By:
+                {tasks.createrBy ? tasks.createrBy.fullName : "Unknown"}
+              </Text>
+            </View>
+            {tasks.file && (
+              <Button
+                title="Open file"
+                onPress={() => downloadFile(tasks.file)}
               />
-              <Text> {fileName.name}</Text>
-            </View>
-            <View
+            )}
+          </View>
+        )}
+        <Text style={{ textAlign: "center", color: "red" }}>
+          Showing {data.length} results
+        </Text>
+      </View>
+      <FlatList
+        data={data}
+        style={{ marginBottom: 330 }}
+        renderItem={renderItem}
+        keyExtractor={(item) => item._id}
+        ListEmptyComponent={
+          <View>
+            <Text style={[Generate.textCenter]}>
+              <Icon name="comment-o" size={100} color="#FF0000" />
+            </Text>
+            <Text
               style={[
-                stylesTask.d_flex,
-                stylesTask.justify_between,
+                Generate.bold,
+                Generate.textCenter,
                 Generate.marginVertical,
               ]}
             >
-              <TouchableOpacity
-                style={[Generate.box_status_cancle, Generate.box]}
-                onPress={handleReset} // Reset on press
-              >
-                <Text style={Generate.color_cancle}>Reset</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[Generate.box_status_done, Generate.box]}
-                onPress={handleSubmit} // Submit on press
-              >
-                <Text style={Generate.color_done}>Submit</Text>
-              </TouchableOpacity>
-            </View>
+              No comments found!
+            </Text>
+          </View>
+        }
+      />
+      {/* Input description */}
+      <View
+        style={[
+          {
+            width: "100%",
+            position: "absolute",
+            bottom: 0,
+          },
+        ]}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "flex-end",
+            marginBottom: 100,
+            marginHorizontal: 10,
+          }}
+        >
+          <View
+            style={[
+              stylesTask.control_content_task,
+              { backgroundColor: "#F5F5F5" },
+            ]}
+          >
+            <TouchableOpacity onPress={handleFileUpload}>
+              <Image
+                style={stylesTask.import_img}
+                source={require("../img/folder-plus.png")}
+              />
+            </TouchableOpacity>
+          </View>
+          <View>
+            <TextInput
+              style={[
+                stylesTask.text_create_task,
+                stylesTask.font_size_content,
+              ]}
+              placeholder="Description"
+              multiline
+              numberOfLines={4}
+              value={description} // Bind description state
+              onChangeText={setDescription} // Update state
+            />
+            <Text> {fileName.name}</Text>
+          </View>
+          <View
+            style={[
+              stylesTask.d_flex,
+              stylesTask.justify_between,
+              Generate.marginVertical,
+              { marginHorizontal: 20 },
+            ]}
+          >
+            <TouchableOpacity
+              style={[Generate.box_status_cancle, Generate.box]}
+              onPress={handleReset} // Reset on press
+            >
+              <Text style={Generate.color_cancle}>Reset</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[Generate.box_status_done, Generate.box]}
+              onPress={handleSubmit} // Submit on press
+            >
+              <Text style={Generate.color_done}>Submit</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 };
+////////////////////////////////
 const styles = StyleSheet.create({
   comment_item: {
     backgroundColor: "#f9f9f9", // Màu nền cho bình luận
-    borderRadius: 10, // Bo tròn các góc
+    borderRadius: 5, // Bo tròn các góc
     padding: 15, // Khoảng cách bên trong
-    marginVertical: 10, // Khoảng cách giữa các bình luận
+    marginVertical: 5, // Khoảng cách giữa các bình luận
     marginHorizontal: 10,
     shadowColor: "#000", // Màu bóng
     shadowOffset: {
@@ -332,6 +383,30 @@ const styles = StyleSheet.create({
     fontSize: 12, // Kích thước chữ cho ngày
     color: "#999", // Màu chữ nhạt hơn cho ngày
     textAlign: "right", // Căn phải
+  },
+
+  taskContainer: {
+    padding: 10,
+    marginVertical: 5,
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 1, // For Android shadow
+  },
+  title: {
+    fontSize: 18,
+    color: "black",
+    fontWeight: "bold",
+    marginBottom: 1,
+  },
+  description: {
+    fontSize: 16,
+    color: "black",
+    marginBottom: 1,
+  },
+  detail: {
+    fontSize: 12,
+    color: "black",
+    marginBottom: 1,
   },
 });
 

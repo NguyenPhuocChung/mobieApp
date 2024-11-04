@@ -1,46 +1,61 @@
 const Task = require("../models/addTaskModels"); // Import model dự án
-
+const multer = require("multer");
+const path = require("path");
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "file/"); // Đường dẫn nơi lưu file
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname); // Đặt tên file
+  },
+});
+const upload = multer({ storage });
 // Hàm thêm tác vụ
-const addTask = async (req, res) => {
-  const {
-    title,
-    description,
-    status,
-    invite,
-    startDate,
-    startTime,
-    endDate,
-    endTime,
-    projectId,
-    createrBy,
-  } = req.body;
 
-  try {
-    const newTask = new Task({
-      title,
-      description,
-      status,
-      invite,
-      startDate,
-      startTime,
-      endDate,
-      endTime,
-      projectId,
-      createrBy,
-    });
+const addTask = [
+  upload.single("file"),
+  async (req, res) => {
+    console.log("Request Body:", req.body);
 
-    const savedTask = await newTask.save();
-    res.status(201).json(savedTask);
-  } catch (error) {
-    console.error("Error creating task:", error); // Cập nhật thông báo lỗi
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
+    try {
+      if (!req.body.data) {
+        return res
+          .status(400)
+          .json({ message: "Missing project data in request body" });
+      }
+
+      let taskData;
+      try {
+        taskData = JSON.parse(req.body.data); // Parse JSON data from formData
+      } catch (parseError) {
+        console.error("Error parsing project data:", parseError);
+        return res
+          .status(400)
+          .json({ message: "Invalid JSON format for project data" });
+      }
+
+      console.log("Parsed Project Data:", taskData);
+
+      // Create a new project object
+      const newTask = new Task({
+        ...taskData,
+        file: req.file ? req.file.filename : null, // Add file path if a file is uploaded
+      });
+
+      // Save the project to the database
+      const savedTask = await newTask.save();
+      res.status(201).json(savedTask);
+    } catch (error) {
+      console.error("Error creating project:", error); // Log error for debugging
+      res.status(500).json({ message: "Server error", error: error.message });
+    }
+  },
+];
 
 // Hàm tìm tất cả tác vụ
 const findAllTasks = async (req, res) => {
   try {
-    const tasks = await Task.find().populate("invite", "fullName");
+    const tasks = await Task.find().populate("invite");
     // Lấy tất cả các tác vụ
     res.status(200).json(tasks); // Trả về danh sách tác vụ
     console.log(tasks); // In danh sách tác vụ ra màn hình
@@ -49,10 +64,13 @@ const findAllTasks = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 const findAllTasksById = async (req, res) => {
   try {
     const id = req.params.id;
-    const tasks = await Task.findById(id);
+    const tasks = await Task.findById(id)
+      .populate("invite", "fullName")
+      .populate("createrBy", "fullName");
 
     // Lấy tất cả các tác vụ
     res.status(200).json(tasks); // Trả về danh sách tác vụ
@@ -98,9 +116,13 @@ const updateTasksById = async (req, res) => {
 const findAllTasksByProjectId = async (req, res) => {
   const { projectId } = req.params; // Lấy projectId từ params
   try {
-    const tasks = await Task.find({ projectId }).populate("invite", "fullName"); // Chỉnh sửa để tìm theo projectId
+    const tasks = await Task.find({ projectId })
+      .populate("invite")
+      .populate("createrBy"); // Chỉnh sửa để tìm theo projectId
     res.status(200).json(tasks); // Trả về danh sách tác vụ
-    console.log(tasks); // In danh sách tác vụ ra màn hình
+    console.log("====================================");
+    console.log(tasks);
+    console.log("====================================");
   } catch (error) {
     console.error("Error finding tasks:", error);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -129,7 +151,34 @@ const getTasksByInvite = async (req, res) => {
       .json({ message: "Server error. Could not fetch projects." });
   }
 };
+
+//
+const updateTaskStatus = async (req, res) => {
+  const { id } = req.params; // ID project từ params
+  const { status } = req.body; // Status mới
+  console.log("====================================");
+  console.log(id, status);
+  console.log("====================================");
+  try {
+    const updatedTask = await Task.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedTask) {
+      return res.status(404).json({ message: "Task not found" }); // Trả về lỗi nếu không tìm thấy task
+    }
+
+    return res.status(200).json(updatedTask);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error", error });
+  }
+};
+
 module.exports = {
+  updateTaskStatus,
   addTask,
   findAllTasks,
   findAllTasksById,

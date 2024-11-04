@@ -12,7 +12,7 @@ import Dialog from "react-native-dialog";
 import RNPickerSelect from "react-native-picker-select";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import Generate from "../CSS/Generate";
-import { login } from "../api/apiservice";
+import { login } from "../api/authService";
 
 const Login = ({ navigation }) => {
   const [role, setRole] = useState("");

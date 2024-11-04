@@ -16,14 +16,12 @@ import {
 import {
   ActivityIndicator,
   Button,
-  Card,
   Modal,
   TextInput,
-  Title,
 } from "react-native-paper";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import Generate from "../CSS/Generate";
-import { fetchAccount, updateAccount } from "../api/apiservice";
+import { fetchAccount, updateAccount } from "../api/accountService";
+import URL from "../midleware/authMidleware";
 
 const AccountDetail = () => {
   const [image, setImage] = useState(null);
@@ -45,12 +43,13 @@ const AccountDetail = () => {
     startDate: null,
     salary: null,
     avatar: null,
-    workHistory: [],
   });
 
   const loadData = async () => {
     try {
       const idUser = await AsyncStorage.getItem("userId");
+      console.log(idUser);
+
       if (idUser) setId(idUser);
     } catch (error) {
       console.log("Error fetching data from AsyncStorage", error);
@@ -100,12 +99,34 @@ const AccountDetail = () => {
   };
 
   const handleUpdateAccount = async () => {
+    const validationErrors = [];
+
+    // Add specific validation rules for fields
+    if (updatedAccount.phone && !/^\d{10,15}$/.test(updatedAccount.phone)) {
+      validationErrors.push("Phone number must be between 10-15 digits.");
+    }
+    if (
+      updatedAccount.email &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updatedAccount.email)
+    ) {
+      validationErrors.push("Invalid email format.");
+    }
+    if (updatedAccount.salary && isNaN(updatedAccount.salary)) {
+      validationErrors.push("Salary must be a valid number.");
+    }
+
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join("\n"));
+      return;
+    }
+
     try {
       await updateAccount(id, updatedAccount);
       const accountData = await fetchAccount(id);
       setAccount(accountData);
       setUpdatedAccount(accountData);
       setVisible(false);
+      setError(null); // Clear error if successful
     } catch (err) {
       setError(err.message);
     }
@@ -138,7 +159,7 @@ const AccountDetail = () => {
 
       try {
         await axios.put(
-          `http://192.168.1.3:5000/api/auth/upload/${id}`,
+          `http://${URL.BASE_URL}:5000/api/auth/upload/${id}`,
           formData,
           {
             headers: {
@@ -158,10 +179,6 @@ const AccountDetail = () => {
     return <ActivityIndicator size="large" color="#6200ee" />;
   }
 
-  if (error) {
-    return <Text style={styles.errorText}>Error: {error}</Text>;
-  }
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -173,67 +190,40 @@ const AccountDetail = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Card style={styles.card}>
-          <Card.Content>
-            <View style={styles.avatarContainer}>
-              {account?.avatar && (
-                <Image
-                  source={{ uri: `http://192.168.1.3:5000/${account.avatar}` }}
-                  style={styles.avatar}
-                />
-              )}
-              <TouchableOpacity onPress={handleImageUpload}>
-                <Text style={styles.uploadButtonText}>Upload</Text>
-              </TouchableOpacity>
-            </View>
-            <View>
-              {renderDetail("Full Name", account.fullName, "person")}
-              {renderDetail("Birth Date", account.birthDate || "N/A", "event")}
-              {renderDetail("Address", account.address || "N/A", "location-on")}
-              {renderDetail("Phone", account.phone || "N/A", "phone")}
-              {renderDetail("Email", account.email, "email")}
-              {renderDetail("Position", account.position || "N/A", "work")}
-              {renderDetail("Role", account.role, "supervisor-account")}
-              {renderDetail(
-                "Department",
-                account.department || "N/A",
-                "business"
-              )}
-              {renderDetail(
-                "Start Date",
-                account.startDate || "N/A",
-                "date-range"
-              )}
-            </View>
-          </Card.Content>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => setVisible(true)}
-          >
-            <Text style={styles.editButtonText}>Edit</Text>
+        <View style={styles.avatarContainer}>
+          {account?.avatar && (
+            <Image
+              source={{
+                uri: `http://${URL.BASE_URL}:5000/${account.avatar}`,
+              }}
+              style={styles.avatar}
+            />
+          )}
+          <TouchableOpacity onPress={handleImageUpload}>
+            <Text style={styles.uploadButtonText}>Upload</Text>
           </TouchableOpacity>
-        </Card>
-
-        <Card style={styles.card}>
-          <Card.Content>
-            <Title style={styles.subTitle}>Work History</Title>
-            {account.workHistory && account.workHistory.length > 0 ? (
-              account.workHistory.map((work, index) => (
-                <View key={work._id} style={styles.workHistory}>
-                  <Text style={Generate.bold}>Project {index + 1}:</Text>
-                  <Text>- {work.title}</Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.noHistoryText}>
-                No work history available.
-              </Text>
-            )}
-          </Card.Content>
-        </Card>
+        </View>
+        <View>
+          {renderDetail("Full Name", account.fullName, "person")}
+          {renderDetail("Birth Date", account.birthDate || "N/A", "event")}
+          {renderDetail("Address", account.address || "N/A", "location-on")}
+          {renderDetail("Phone", account.phone || "N/A", "phone")}
+          {renderDetail("Email", account.email, "email")}
+          {renderDetail("Position", account.position || "N/A", "work")}
+          {renderDetail("Role", account.role, "supervisor-account")}
+          {renderDetail("Department", account.department || "N/A", "business")}
+          {renderDetail("Start Date", account.startDate || "N/A", "date-range")}
+        </View>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => setVisible(true)}
+        >
+          <Text style={styles.editButtonText}>Edit</Text>
+        </TouchableOpacity>
 
         <Modal
           visible={visible}
+          animationType="slide"
           onDismiss={() => setVisible(false)}
           contentContainerStyle={styles.modalContainer}
         >
@@ -270,16 +260,15 @@ const renderDetail = (label, value, iconName) => (
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 16,
-    backgroundColor: "#f5f5f5",
+    height: "100%",
   },
   card: {
     marginBottom: 16,
     borderRadius: 10,
-    elevation: 3,
     backgroundColor: "#ffffff",
     padding: 16,
+    height: "100%",
   },
   avatarContainer: {
     alignItems: "center",
@@ -306,6 +295,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     backgroundColor: "white",
+    height: "100%",
     padding: 20,
     margin: 20,
     borderRadius: 10,

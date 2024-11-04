@@ -14,6 +14,22 @@ const findAccounts = async (req, res) => {
   }
 };
 
+const findAccountsByRole = async (req, res) => {
+  const role = req.params.userRole;
+  console.log(role);
+  try {
+    const members = await Account.find({ role: role }).populate(
+      "workHistory",
+      "title"
+    );
+    res.status(200).json(members); // Trả về danh sách tài khoản member
+    console.log(members);
+  } catch (error) {
+    res.status(500).json({ message: "Error finding member", error });
+    console.error("Error finding members:", error);
+  }
+};
+
 const findAccountsByMemberRole = async (req, res) => {
   try {
     const members = await Account.find({ role: "memeber" }).populate(
@@ -153,9 +169,39 @@ const uploadAvatar = async (req, res) => {
     }
   });
 };
+const updateInviteFieldById = async (req, res) => {
+  const { id } = req.params; // lấy _id từ params
+  const { invite } = req.body; // chỉ lấy trường invite từ req.body
 
+  try {
+    // Kiểm tra tính hợp lệ của ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+
+    // Tìm và cập nhật chỉ trường invite
+    const updatedInvite = await Account.findByIdAndUpdate(
+      id,
+      { invite, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    );
+
+    // Kiểm tra nếu không tìm thấy invite
+    if (!updatedInvite) {
+      return res.status(404).json({ message: "Invite not found" });
+    }
+
+    // Trả về dữ liệu đã cập nhật
+    res.status(200).json(updatedInvite);
+  } catch (error) {
+    console.error("Error updating invite field:", error);
+    res.status(500).json({ message: "Error updating invite field", error });
+  }
+};
 // Xuất các hàm để sử dụng ở nơi khác
 module.exports = {
+  updateInviteFieldById,
+  findAccountsByRole,
   findAccountsByMemberRole,
   findAccountsByLeaderRole,
   findAccountsById,

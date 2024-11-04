@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons"; // Thay đổi bộ icon tùy ý
 
-import { fetchTask } from "../api/apiservice";
+import { fetchTask } from "../api/taskService";
 import Generate from "../CSS/Generate";
 import styles from "../CSS/ManageTask";
 import statusmember from "../CSS/StatusMember";
@@ -102,14 +102,23 @@ const StatusAllTask = ({ navigation }) => {
                 styles.box_status,
                 styles.d_flex,
                 styles.paddingRL,
-                styles.box_status_progress,
+                item.status === "Ongoing"
+                  ? [styles.box_status_progress]
+                  : item.status === "Not started"
+                  ? styles.box_status_notstarted
+                  : [styles.box_status_done],
               ]}
             >
               <Text style={[styles.point, styles.point_progress]}></Text>
               <Text
                 style={[
                   styles.padding_right,
-                  styles.color_progress,
+                  item.status === "Ongoing"
+                    ? [styles.color_progress]
+                    : item.status === "Not started"
+                    ? styles.color_notstarted
+                    : styles.color_done,
+                  styles.font_size_content,
                   styles.font_size_content,
                 ]}
               >

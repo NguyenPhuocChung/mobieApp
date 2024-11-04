@@ -1,51 +1,86 @@
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import React, { useState } from "react";
 import {
   Alert,
-  Image,
   Linking,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-
+import Feather from "react-native-vector-icons/Feather";
 import DetailDailyMeetingStyles from "../CSS/DetaildailyMeeting";
 import GenerateStyles from "../CSS/Generate";
-import { deleteCalendarData, updateCalendarData } from "../api/apiservice";
+import { deleteCalendarData, updateCalendarData } from "../api/calendarService";
 
-const DetailDailytMeeting = () => {
+const DetailDailyMeeting = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { meeting, startTime, endTime } = route.params;
 
-  // Trạng thái cho việc cập nhật tiêu đề và mô tả
+  const isValidDate = (dateString) => !isNaN(new Date(dateString).getTime());
+
+  const [startDate, setStartDate] = useState(
+    isValidDate(startTime) ? new Date(startTime) : new Date()
+  );
+  const [endDate, setEndDate] = useState(
+    isValidDate(endTime) ? new Date(endTime) : new Date()
+  );
+
   const [updatedTitle, setUpdatedTitle] = useState(meeting.title);
   const [updatedDescription, setUpdatedDescription] = useState(
     meeting.description
   );
+  const [updatedLink, setUpdatedLink] = useState(meeting.link);
+  const [updatedStatus, setUpdatedStatus] = useState(meeting.status);
+
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
   const handleLinkPress = () => {
-    Linking.openURL("https://meet.google.com/zks-kogz-afi");
+    Linking.openURL(updatedLink);
   };
 
   const deleteCalendaring = async (id) => {
-    try {
-      const response = await deleteCalendarData(id);
-      console.log("Calendaring deleted successfully", response.data);
-      Alert.alert("Success", "Deleted successfully!");
-      navigation.goBack();
-    } catch (error) {
-      console.error("Error deleting calendaring:", error.message);
-      Alert.alert("Error", "Failed to delete calendaring.");
-    }
+    Alert.alert(
+      "Confirm Delete",
+      "Are you sure you want to delete this meeting?",
+      [
+        {
+          text: "Cancel",
+          onPress: () => console.log("Deletion canceled"),
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          onPress: async () => {
+            try {
+              const response = await deleteCalendarData(id);
+              console.log("Calendaring deleted successfully", response.data);
+              Alert.alert("Success", "Deleted successfully!");
+              navigation.goBack();
+            } catch (error) {
+              console.error("Error deleting calendaring:", error.message);
+              Alert.alert("Error", "Failed to delete calendaring.");
+            }
+          },
+          style: "destructive",
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const updateCalendaring = async (id) => {
     const updatedData = {
-      title: updatedTitle, // Sử dụng dữ liệu từ TextInput
-      description: updatedDescription, // Sử dụng dữ liệu từ TextInput
-      status: "updated",
+      title: updatedTitle,
+      description: updatedDescription,
+      link: updatedLink,
+      status: updatedStatus,
+      startTime: startDate.toISOString(),
+      endTime: endDate.toISOString(),
     };
     try {
       const response = await updateCalendarData(id, updatedData);
@@ -57,68 +92,106 @@ const DetailDailytMeeting = () => {
     }
   };
 
+  const onChangeStartTime = (event, selectedTime) => {
+    setShowStartTimePicker(false);
+    if (selectedTime) {
+      setStartDate(selectedTime);
+    }
+  };
+
+  const onChangeEndTime = (event, selectedTime) => {
+    setShowEndTimePicker(false);
+    if (selectedTime) {
+      setEndDate(selectedTime);
+    }
+  };
+
+  // Kiểm tra vai trò của người tạo
+  const isCreator = meeting.createrBy.role === "creator_role"; // Thay 'creator_role' bằng giá trị đúng
+
   return (
-    <View style={DetailDailyMeetingStyles.container}>
-      <Text style={DetailDailyMeetingStyles.font_size_title}>
-        {meeting.title}
-      </Text>
-      <Text
+    <ScrollView style={[DetailDailyMeetingStyles.container, { gap: 10 }]}>
+      <TextInput
         style={[
-          DetailDailyMeetingStyles.font_size_description,
+          DetailDailyMeetingStyles.input,
           GenerateStyles.marginVertical,
+          DetailDailyMeetingStyles.font_size_title,
         ]}
-      >
-        {meeting.description}
-      </Text>
+        placeholder="Update Title"
+        value={updatedTitle}
+        onChangeText={setUpdatedTitle}
+      />
+      <TextInput
+        style={[
+          DetailDailyMeetingStyles.input,
+          GenerateStyles.marginVertical,
+          DetailDailyMeetingStyles.font_size_description,
+        ]}
+        placeholder="Update Description"
+        value={updatedDescription}
+        onChangeText={setUpdatedDescription}
+        multiline
+      />
 
-      {/* Thông tin thời gian */}
-      <View style={GenerateStyles.d_flex_align_center}>
-        <View
-          style={[
-            GenerateStyles.d_flex_align_center,
-            DetailDailyMeetingStyles.width,
-          ]}
+      {/* Start Time Picker */}
+      <View style={[GenerateStyles.box_time]}>
+        <Text style={[GenerateStyles.bold]}>Start Time</Text>
+        <TouchableOpacity
+          onPress={() => setShowStartTimePicker(true)}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: "#CDCDE6",
+            borderRadius: 5,
+            paddingVertical: 5,
+            width: 200,
+          }}
         >
-          <Image
-            style={GenerateStyles.marginRight}
-            source={require("../img/clock.png")}
-          />
-          <Text>Time</Text>
-        </View>
-        <Text style={GenerateStyles.bold}>
-          {startTime}
-          <Image source={require("../img/arrow-right.png")} /> {endTime}
-        </Text>
-      </View>
-
-      {/* Thông tin liên kết */}
-      <View style={GenerateStyles.d_flex_align_center}>
-        <View
-          style={[
-            GenerateStyles.d_flex_align_center,
-            DetailDailyMeetingStyles.width,
-          ]}
-        >
-          <Image
-            style={GenerateStyles.marginRight}
-            source={require("../img/link-2.png")}
-          />
-          <Text>Link</Text>
-        </View>
-        <TouchableOpacity onPress={handleLinkPress}>
-          <Text
-            style={[
-              GenerateStyles.bold,
-              GenerateStyles.italic,
-              GenerateStyles.underline,
-            ]}
-          >
-            {meeting.link}
+          <Text style={{ marginLeft: 10 }}>
+            {startDate.toLocaleTimeString()}
           </Text>
         </TouchableOpacity>
+        {showStartTimePicker && (
+          <DateTimePicker
+            testID="startTimePicker"
+            value={startDate}
+            mode="time"
+            display="default"
+            onChange={onChangeStartTime}
+          />
+        )}
       </View>
 
-      {/* Thông tin người tạo */}
+      {/* End Time Picker */}
+      <View style={[GenerateStyles.box_time]}>
+        <Text style={[GenerateStyles.bold]}>End Time</Text>
+        <TouchableOpacity
+          onPress={() => setShowEndTimePicker(true)}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: "#CDCDE6",
+            borderRadius: 5,
+            paddingVertical: 5,
+            width: 200,
+          }}
+        >
+          <Text style={{ marginLeft: 10 }}>{endDate.toLocaleTimeString()}</Text>
+        </TouchableOpacity>
+        {showEndTimePicker && (
+          <DateTimePicker
+            testID="endTimePicker"
+            value={endDate}
+            mode="time"
+            display="default"
+            onChange={onChangeEndTime}
+          />
+        )}
+      </View>
+
+      {/* Các trường thông tin khác */}
       <View style={GenerateStyles.d_flex_align_center}>
         <View
           style={[
@@ -126,105 +199,50 @@ const DetailDailytMeeting = () => {
             DetailDailyMeetingStyles.width,
           ]}
         >
-          <Image
-            style={GenerateStyles.marginRight}
-            source={require("../img/user.png")}
-          />
-          <Text>Creator</Text>
+          <Feather name="link" size={24} style={GenerateStyles.marginRight} />
+          <Text>Link</Text>
         </View>
-        <Text style={GenerateStyles.bold}>
-          {meeting.creater}
-          <Text style={[GenerateStyles.textDanger]}> (Leader)</Text>
-        </Text>
+        <TextInput
+          style={[
+            DetailDailyMeetingStyles.input,
+            GenerateStyles.marginVertical,
+          ]}
+          placeholder="Update Link"
+          value={updatedLink}
+          onChangeText={setUpdatedLink}
+        />
       </View>
 
-      {/* Thông tin trạng thái */}
-      <View style={GenerateStyles.d_flex_align_center}>
+      {/* Button Update & Delete */}
+      {isCreator && ( // Chỉ hiển thị nút nếu người dùng là người tạo
         <View
           style={[
             GenerateStyles.d_flex_align_center,
-            DetailDailyMeetingStyles.width,
+            GenerateStyles.marginVertical,
+            GenerateStyles.justify_between,
+            { gap: 10 },
           ]}
         >
-          <Image
-            style={GenerateStyles.marginRight}
-            source={require("../img/pie-chart.png")}
-          />
-          <Text>Status</Text>
-        </View>
-        <View
-          style={[
-            GenerateStyles.d_flex_align_center,
-            DetailDailyMeetingStyles.detailText,
-            GenerateStyles.box_status,
-            GenerateStyles.box_status_notstarted,
-            GenerateStyles.color_notstarted,
-          ]}
-        >
-          <Text
+          <TouchableOpacity
+            onPress={() => updateCalendaring(meeting._id)}
+            style={[GenerateStyles.box_status_done, GenerateStyles.box]}
+          >
+            <Text style={[GenerateStyles.color_done]}>Update</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => deleteCalendaring(meeting._id)}
             style={[
-              GenerateStyles.point,
-              GenerateStyles.point_notstarted,
+              GenerateStyles.box_status_cancle,
+              GenerateStyles.box,
               GenerateStyles.marginRight,
             ]}
-          />
-          <Text>{meeting.status}</Text>
+          >
+            <Text style={[GenerateStyles.color_cancle]}>Delete</Text>
+          </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Nút cập nhật và xóa */}
-      <View style={GenerateStyles.d_flex_align_center}>
-        <TouchableOpacity
-          onPress={() => updateCalendaring(meeting._id)}
-          style={[GenerateStyles.box_status_done, GenerateStyles.box]}
-        >
-          <Text style={[GenerateStyles.color_done]}>Update</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => deleteCalendaring(meeting._id)}
-          style={[
-            GenerateStyles.box_status_cancle,
-            GenerateStyles.box,
-            GenerateStyles.marginRight,
-          ]}
-        >
-          <Text style={[GenerateStyles.color_cancle]}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* TextInput để nhập dữ liệu cập nhật */}
-      <View
-        style={[
-          GenerateStyles.d_flex_align_center,
-          GenerateStyles.marginVertical,
-        ]}
-      >
-        <TextInput
-          style={[
-            DetailDailyMeetingStyles.input,
-            GenerateStyles.marginVertical,
-          ]}
-          placeholder="Update Title"
-          value={updatedTitle} // Đặt giá trị cho TextInput
-          onChangeText={setUpdatedTitle} // Cập nhật giá trị khi nhập
-        />
-        <TextInput
-          style={[
-            DetailDailyMeetingStyles.input,
-            GenerateStyles.marginVertical,
-          ]}
-          placeholder="Update Description"
-          value={updatedDescription} // Đặt giá trị cho TextInput
-          onChangeText={setUpdatedDescription} // Cập nhật giá trị khi nhập
-          multiline
-        />
-      </View>
-
-      <Text
-        style={[GenerateStyles.horizol_line_traight, GenerateStyles.mb2]}
-      ></Text>
-    </View>
+      )}
+    </ScrollView>
   );
 };
 
-export default DetailDailytMeeting;
+export default DetailDailyMeeting;

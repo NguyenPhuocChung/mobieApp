@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   FlatList,
   Image,
   RefreshControl,
@@ -10,7 +11,8 @@ import {
   View,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons"; // Thay đổi bộ icon tùy ý
-import { fetchTaskByIdInvite } from "../api/apiservice";
+import { fetchTaskByIdInvite } from "../api/inviteService";
+import { updateTaskStatus } from "../api/taskService";
 import Generate from "../CSS/Generate";
 import styles from "../CSS/ManageTask";
 import statusmember from "../CSS/StatusMember";
@@ -21,6 +23,31 @@ const ListTask = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false); // Trạng thái refreshing
   const [error, setError] = useState(null); // Lưu lỗi
   const [id, setId] = useState(null);
+  const [status, setStatus] = useState("Ongoing");
+
+  const handleUpdateStatus = async (id) => {
+    console.log("====================================");
+    console.log(id, status);
+    console.log("====================================");
+    try {
+      const updatedTask = await updateTaskStatus(id, status);
+      if (updatedTask) {
+        // Cập nhật giao diện hoặc thông báo thành công cho người dùng
+        console.log("Updated task:", updatedTask);
+        Alert.alert(
+          "Task Updated",
+          `The task "${updatedTask.title}" has been updated to status: "${updatedTask.status}".`
+        );
+      }
+    } catch (error) {
+      // Xử lý lỗi, có thể thông báo cho người dùng
+      console.error("Failed to update task status:", error);
+      Alert.alert(
+        "Update Failed",
+        "There was an error updating the task. Please try again."
+      );
+    }
+  };
 
   const getID = async () => {
     const data = await AsyncStorage.getItem("userId");
@@ -36,22 +63,36 @@ const ListTask = ({ navigation }) => {
   }, []);
 
   const task = async (inviteId) => {
-    // console.log("Invite", inviteId);
+    // Check if inviteId is provided
+    console.log(inviteId);
+
     if (!inviteId) {
-      console.log("Invite ID is null. Skipping task fetch.");
-      return; // Nếu inviteId là null, không gọi API
+      console.error("Invite ID is null or undefined. Skipping task fetch.");
+      setError("Invalid Invite ID.");
+      return; // Exit function early if inviteId is missing
     }
+
     setLoading(true);
-    setRefreshing(true); // Bắt đầu trạng thái refreshing
+    setRefreshing(true); // Start refreshing state
+
     try {
-      const taskData = await fetchTaskByIdInvite(inviteId); // Lấy dữ liệu tác vụ
-      setTasks(taskData); // Lưu dữ liệu vào state
-      console.log("task", taskData); // In ra dữ liệu để debug
+      const taskData = await fetchTaskByIdInvite(inviteId); // Fetch task data by inviteId
+      if (Array.isArray(taskData)) {
+        setTasks(taskData); // Set tasks if taskData is an array
+      } else {
+        console.warn("Unexpected response format:", taskData);
+        setTasks([]); // Fallback to empty array if data is not an array
+      }
+      console.log("Fetched Task Data:", taskData); // Debugging info
     } catch (err) {
-      setError(err.message); // Lưu lỗi nếu có
+      console.error("Error chung fetching tasks:", err.message || err);
+
+      setError(
+        err.message || "An unknown error occurred while fetching tasks."
+      );
     } finally {
-      setLoading(false); // Đánh dấu rằng việc tải dữ liệu đã hoàn tất
-      setRefreshing(false); // Kết thúc trạng thái refreshing
+      setLoading(false); // Mark loading as complete
+      setRefreshing(false); // End refreshing state
     }
   };
 
@@ -71,7 +112,7 @@ const ListTask = ({ navigation }) => {
 
     return (
       <View style={[styles.d_flex, styles.margin_vertical]}>
-        <TouchableOpacity onPress={() => chooseAction(item)}>
+        <TouchableOpacity>
           <Image
             style={[statusmember.margin_right]}
             source={require("../img/draggable.png")}
@@ -113,26 +154,56 @@ const ListTask = ({ navigation }) => {
               {item.description}
             </Text>
           </View>
-          <View>
+          <View
+            style={[Generate.d_flex_align_center, Generate.justify_between]}
+          >
             <View
               style={[
                 styles.box_status,
                 styles.d_flex,
                 styles.paddingRL,
-                styles.box_status_progress,
+                item.status === "Not started"
+                  ? styles.box_status_notstarted
+                  : item.status === "Ongoing"
+                  ? styles.box_status_progress
+                  : item.status === "Done"
+                  ? [styles.box_status_done]
+                  : null, // Nếu không thuộc các trạng thái trên, không áp dụng kiểu nào              ]}
               ]}
             >
               <Text style={[styles.point, styles.point_progress]}></Text>
               <Text
                 style={[
                   styles.padding_right,
-                  styles.color_progress,
+                  item.status === "Not started"
+                    ? styles.color_notstarted
+                    : item.status === "Ongoing"
+                    ? styles.color_ongoing
+                    : item.status === "Done"
+                    ? [styles.color_done]
+                    : null, // Nếu không
                   styles.font_size_content,
                 ]}
               >
                 {item.status}
               </Text>
             </View>
+            {item.status === "Ongoing" || item.status === "Done" ? (
+              <Text></Text>
+            ) : (
+              <TouchableOpacity onPress={() => handleUpdateStatus(item._id)}>
+                <Text
+                  style={[
+                    styles.font_size_content,
+                    Generate.box_status_notstarted,
+                    Generate.box_status_notstarted,
+                    Generate.box,
+                  ]}
+                >
+                  {item.status}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>

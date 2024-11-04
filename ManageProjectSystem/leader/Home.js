@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useNavigation } from "@react-navigation/native"; // Import useFocusEffect
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import React, { useEffect, useRef } from "react";
 import {
   Alert,
   Animated,
   BackHandler,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,7 +14,31 @@ import {
 
 const Home = () => {
   const navigation = useNavigation();
-  const lineWidth = useRef(new Animated.Value(0)).current; // Khởi tạo Animated.Value
+  const lineWidth = useRef(new Animated.Value(0)).current;
+
+  // Dữ liệu cho danh sách
+  const sections = [
+    {
+      title: "Notification",
+      icon: "notifications-outline",
+      onPress: () => navigation.navigate("Notification"),
+    },
+    {
+      title: "Manager Task",
+      icon: "briefcase-outline",
+      onPress: () => navigation.navigate("ManageTask"),
+    },
+    {
+      title: "Dashboard",
+      icon: "grid-outline",
+      onPress: () => navigation.navigate("DashBoardLeader"),
+    },
+    {
+      title: "Show All Task",
+      icon: "list-outline",
+      onPress: () => navigation.navigate("StatusAllTask"),
+    },
+  ];
 
   useEffect(() => {
     Animated.timing(lineWidth, {
@@ -24,10 +48,9 @@ const Home = () => {
     }).start();
 
     const backAction = () => {
-      // Kiểm tra xem có phải là trang Home không
       if (navigation.canGoBack()) {
-        navigation.goBack(); // Nếu có, quay lại trang trước đó
-        return true; // Đã xử lý sự kiện
+        navigation.goBack();
+        return true;
       } else {
         Alert.alert("Notification", "Are you sure you want to exit the app?", [
           {
@@ -46,79 +69,35 @@ const Home = () => {
       backAction
     );
 
-    return () => backHandler.remove(); // Hủy đăng ký khi component unmount
+    return () => backHandler.remove();
   }, [navigation, lineWidth]);
 
   // Sử dụng useFocusEffect để reload dữ liệu khi màn hình được focus
   useFocusEffect(
     React.useCallback(() => {
-      // Load dữ liệu hoặc thực hiện hành động cần thiết ở đây
       console.log("Home screen is focused");
-      // Bạn có thể gọi một hàm fetch dữ liệu ở đây nếu cần
-
       return () => {
         // Clean up nếu cần
       };
     }, [])
   );
 
+  // Hàm render cho từng mục trong danh sách
+  const renderItem = ({ item }) => (
+    <Section title={item.title}>
+      <IconCard icon={item.icon} title={item.title} onPress={item.onPress} />
+    </Section>
+  );
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.main}>
-        <Section title="Notification">
-          <IconCard icon="notifications-outline" title="Notification" />
-        </Section>
-        <Animated.View
-          style={[
-            styles.line,
-            {
-              width: lineWidth.interpolate({
-                inputRange: [0, 100],
-                outputRange: ["0%", "50%"],
-              }),
-            },
-          ]}
-        />
-        <Section title="Manager">
-          <IconCard
-            icon="briefcase-outline"
-            title="Manager Task"
-            onPress={() =>
-              navigation.navigate("ManageTask", {
-                name: "ManageTask",
-              })
-            }
-          />
-          <IconCard
-            icon="grid-outline"
-            title="Dashboard"
-            onPress={() => navigation.navigate("DashBoardLeader")}
-          />
-        </Section>
-        <Animated.View
-          style={[
-            styles.line,
-            {
-              width: lineWidth.interpolate({
-                inputRange: [0, 100],
-                outputRange: ["0%", "50%"],
-              }),
-            },
-          ]}
-        />
-        <Section title="Status all task">
-          <IconCard
-            icon="list-outline"
-            title="Show All Task"
-            onPress={() =>
-              navigation.navigate("StatusAllTask", {
-                name: "StatusAllTask",
-              })
-            }
-          />
-        </Section>
-      </View>
-    </ScrollView>
+    <View style={styles.container}>
+      <FlatList
+        data={sections}
+        keyExtractor={(item) => item.title}
+        renderItem={renderItem}
+        contentContainerStyle={styles.listContainer}
+      />
+    </View>
   );
 };
 
@@ -143,15 +122,13 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   container: {
-    flexGrow: 1,
-    backgroundColor: "#F3F4F6",
-    marginTop: 50,
-    marginBottom: 90,
-    paddingBottom: 20,
-  },
-  main: {
     flex: 1,
-    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    paddingTop: 20,
+    paddingBottom: 90,
+  },
+  listContainer: {
+    paddingBottom: 20,
   },
   section: {
     width: "100%",

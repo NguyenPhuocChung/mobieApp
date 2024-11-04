@@ -1,5 +1,8 @@
 // Invite.js
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRoute } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
+
 import {
   Image,
   Modal,
@@ -9,28 +12,46 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Icon from "react-native-vector-icons/FontAwesome";
+
 import CheckBox from "react-native-check-box";
 import { Dropdown } from "react-native-element-dropdown";
 import Generatetylse from "../CSS/Generate";
 import InvitePeople from "../CSS/Invite";
 import styles from "../CSS/ManageTask";
-import { fetchInviteMembers } from "../api/apiservice"; // Import hàm fetchInviteMembers
-
+import { fetchInviteMembers } from "../api/inviteService"; // Import hàm fetchInviteMembers
+import URL from "../midleware/authMidleware";
 const Invite = () => {
   const [invite, setInvite] = useState([]); // Danh sách thành viên
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(true); // Quản lý trạng thái loading
   const [toggleCheckBox, setToggleCheckBox] = useState(false);
+  const [userRole, setId] = useState(""); // Id của người dùng
+  const route = useRoute();
+  const { data } = route.params;
+  console.log("====================================");
+  console.log(data);
+  console.log("====================================");
+  const loadData = async () => {
+    try {
+      const userRole = await AsyncStorage.getItem("userRole");
+      if (userRole) setId(userRole);
+    } catch (error) {
+      console.log("Error fetching data from AsyncStorage", error);
+    }
+  };
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const data = await fetchInviteMembers(); // Gọi hàm từ api.js
+      const data = await fetchInviteMembers(userRole); // Gọi hàm từ api.js
       const formattedData = data.map((member) => ({
         label: member.fullName,
         value: member._id,
       }));
-
       setInvite(formattedData);
       console.log(formattedData);
     } catch (err) {
@@ -42,7 +63,7 @@ const Invite = () => {
 
   useEffect(() => {
     fetchProjects(); // Gọi hàm để lấy dữ liệu khi component mount
-  }, []);
+  }, [userRole]);
 
   return (
     <SafeAreaView style={{ backgroundColor: "white" }}>
@@ -123,41 +144,52 @@ const Invite = () => {
               placeholder="Find a collaborator ..."
             />
           </View>
-          <View style={[styles.d_flex, styles.margin_vertical]}>
-            <CheckBox
-              style={{ padding: 10 }}
-              onClick={() => setToggleCheckBox(!toggleCheckBox)}
-              isChecked={toggleCheckBox}
-            />
+          {data === null ? (
+            <View>
+              <Text>Not member</Text>
+            </View>
+          ) : (
+            <View
+              style={[styles.d_flex, styles.margin_vertical, { width: "100%" }]}
+            >
+              <CheckBox
+                style={{ padding: 10 }}
+                onClick={() => setToggleCheckBox(!toggleCheckBox)}
+                isChecked={toggleCheckBox}
+              />
 
-            <View style={[styles.d_flex, styles.justify_between]}>
-              <View style={[styles.d_flex, InvitePeople.margin_right]}>
-                <Image
-                  source={require("../img/z5735085240252_9117ca7de0843014f366550a8f1d7ef7.jpg")} // Thay link ảnh đại diện của bạn vào đây
-                  style={[styles.avatar, InvitePeople.margin_right]}
-                />
-                <View>
-                  <Text style={[InvitePeople.font_size_note]}>User 1</Text>
-                  <Text style={[InvitePeople.font_size_note]}>
-                    Awaiting minh22's response
+              <View style={[styles.d_flex, styles.justify_around, { flex: 1 }]}>
+                <View style={[styles.d_flex, InvitePeople.margin_right]}>
+                  {data?.invite[0]?.avatar && (
+                    <Image
+                      source={{
+                        uri: `http://${URL.BASE_URL}:5000/${data.invite[0].avatar}`,
+                      }}
+                      style={styles.avatar}
+                    />
+                  )}
+                  <Text
+                    style={[InvitePeople.font_size_note, styles.margin_left]}
+                  >
+                    {data.invite[0]?.fullName}
                   </Text>
                 </View>
-              </View>
 
-              <Text
-                style={[InvitePeople.font_size_note, InvitePeople.marginRL]}
-              >
-                Leader
-              </Text>
+                <Text style={[InvitePeople.font_size_note]}>
+                  {data.invite[0]?.role}
+                </Text>
 
-              <View style={styles.d_flex}>
-                <Image
-                  style={InvitePeople.img_edit}
-                  source={require("../img/trash.png")}
+                <Icon
+                  name="trash"
+                  size={20}
+                  color="#900"
+                  onPress={() => {
+                    /* handle delete */
+                  }}
                 />
               </View>
             </View>
-          </View>
+          )}
         </View>
       </View>
     </SafeAreaView>

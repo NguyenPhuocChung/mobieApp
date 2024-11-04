@@ -80,7 +80,6 @@ const MainScreen = () => {
         <Stack.Screen name="Project" component={ManageProject} />
         <Stack.Screen name="CreateProject" component={CreateProject} />
         <Stack.Screen name="EditProject" component={EditProject} />
-
         <Stack.Screen
           name="StatusMember"
           component={Manage_task_status_project}
@@ -124,7 +123,6 @@ const MainScreen = () => {
         <Stack.Screen name="ManageTask" component={ManageTask} />
         <Stack.Screen name="StatusAllTask" component={StatusAllTask} />
         <Stack.Screen name="EditTask" component={EditTask} />
-
         <Stack.Screen
           options={{
             headerShown: false,
@@ -134,9 +132,7 @@ const MainScreen = () => {
         />
         <Stack.Screen name="CreateTask" component={CreateTask} />
         <Stack.Screen name="ListTask" component={ListTask} />
-
         <Stack.Screen name="HomeMember" component={HomeMember} />
-
         {/* Memeber */}
         <Stack.Screen name="TaskMember" component={ListTaskMember} />
         <Stack.Screen name="Notification" component={Notifications} />

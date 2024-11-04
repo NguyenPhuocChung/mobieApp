@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 0,
     borderBottomLeftRadius: 5,
     borderBottomRightRadius: 5,
-    height: 146,
+    height: 100,
     paddingHorizontal: 8,
     textAlignVertical: "top",
     padding: 10,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#CDCDE6",
     borderRadius: 8,
-    maxWidth: "85%", // Giới hạn chiều rộng tối đa
+    maxWidth: "100%", // Giới hạn chiều rộng tối đa
     height: "auto",
     flex: 1, // Chiếm không gian còn lại
     padding: 16,

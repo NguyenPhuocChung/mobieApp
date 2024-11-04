@@ -1,9 +1,6 @@
-// Import các thư viện cần thiết
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRoute } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
-import Icon from "react-native-vector-icons/FontAwesome"; // Hoặc bộ biểu tượng bạn chọn
-
 import {
   FlatList,
   Image,
@@ -15,46 +12,39 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-// Import các file CSS
+import Icon from "react-native-vector-icons/FontAwesome";
 import CalenderingStyle from "../CSS/Calendering";
 import GenerateStyles from "../CSS/Generate";
 import styles from "../CSS/ManageTask";
-import { fetchCalendarData } from "../api/apiservice"; // Import hàm fetchCalendarData
+import { fetchCalendarData } from "../api/calendarService";
 
-// Component chính của ứng dụng
 const Calendaring = ({ navigation }) => {
-  // Initialize date and show state
-  // const [startDate, setStartDate] = useState(new Date());
-  // //
-  // const [endDate, setEndDate] = useState(new Date());
-  // const [endTime, setEndTime] = useState(new Date());
   const today = new Date();
   const [selectedDateIndex, setSelectedDateIndex] = useState(null);
   const [currentWeekStart, setCurrentWeekStart] = useState(today);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(today);
-  //
   const [refreshing, setRefreshing] = useState(false);
+  const [calendarGetDate, setcalendarGetDate] = useState([]);
+  const route = useRoute();
+  const { calendar } = route.params;
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await getDataFromDate(); // Your data fetching logic
+    await getDataFromDate();
     setRefreshing(false);
   };
-  // Hàm liên kết tới Google Meet
+
   const linkGoogleMeet = () => {
     const url = "https://meet.google.com/zks-kogz-afi";
     Linking.openURL(url);
   };
 
-  // Hàm lấy tên ngày trong tuần
   const getDayOfWeek = (day) => {
     const days = ["S", "M", "T", "W", "T", "F", "S"];
     return days[day];
   };
 
-  // Hàm tạo danh sách các ngày trong tuần
   const generateWeekDates = (startDate) => {
     const dates = [];
     for (let i = 0; i < 7; i++) {
@@ -71,7 +61,6 @@ const Calendaring = ({ navigation }) => {
 
   const dates = generateWeekDates(currentWeekStart);
 
-  // Hàm xử lý thay đổi ngày
   const handleDateChange = (event, date) => {
     if (event.type === "set" && date) {
       setShowDatePicker(false);
@@ -80,84 +69,60 @@ const Calendaring = ({ navigation }) => {
       setSelectedDateIndex(todayIndex);
       setSelectedDate(date);
     } else {
-      setShowDatePicker(false); // Đóng picker nếu hủy
+      setShowDatePicker(false);
     }
   };
 
-  // Hàm xử lý khi người dùng chọn một ngày
   const handleDatePress = (index) => {
     setSelectedDateIndex(index);
     const date = dates[index];
     const newDate = new Date(today.getFullYear(), today.getMonth(), date.date);
     setSelectedDate(newDate);
-    getDataFromDate(selectedDate);
+    getDataFromDate();
   };
 
-  // Hàm xử lý khi người dùng nhấn "Today"
   const handleTodayPress = () => {
     setCurrentWeekStart(today);
     const todayIndex = dates.findIndex((date) => date.isToday);
     setSelectedDateIndex(todayIndex);
     setSelectedDate(today);
-    console.log(selectedDate);
   };
 
-  // Hàm xử lý chuyển sang tuần tiếp theo
   const handleNextWeek = () => {
     const newStartDate = new Date(currentWeekStart);
     newStartDate.setDate(currentWeekStart.getDate() + 7);
     setCurrentWeekStart(newStartDate);
   };
+
   const handlePreviousWeek = () => {
     const newStartDate = new Date(currentWeekStart);
     newStartDate.setDate(currentWeekStart.getDate() - 7);
     setCurrentWeekStart(newStartDate);
   };
+
   const getDataFromDate = async () => {
     try {
-      // Lấy ngày hiện tại dạng YYYY-MM-DD
-      const calendarData = await fetchCalendarData(selectedDate); // Gọi API với ngày hiện tại
-      setcalendarGetDate(calendarData); //
-      console.log("chung", calendarGetDate);
+      const calendarData = await fetchCalendarData(selectedDate);
+      setcalendarGetDate(calendarData);
     } catch (error) {
-      console.log("lo mang roi huhu");
+      console.log("Error fetching calendar data:", error);
     }
   };
+
   useEffect(() => {
     getDataFromDate();
   }, [selectedDate]);
 
   const loadMoreData = () => {
-    // Logic tải lại dữ liệu ở đây
-    // Bạn có thể thực hiện gọi API hoặc thêm dữ liệu mới vào state
     console.log("Loading more data...");
-    // Ví dụ: setCalendar([...calendar, ...newData]); // thêm dữ liệu mới vào danh sách
   };
-  // // // // // // // //
-  const route = useRoute();
-  const { calendar } = route.params;
-  const [calendarGetDate, setcalendarGetDate] = useState(calendar);
-  // /// // // // // //
-  const renderItem = ({ item }) => {
-    // Kiểm tra nếu item không có dữ liệu (length === 0)
 
+  const renderItem = ({ item }) => {
     const startTime = item.startTime ? new Date(item.startTime) : null;
     const endTime = item.endTime ? new Date(item.endTime) : null;
 
-    // Định dạng thời gian bắt đầu và kết thúc
-    const startTimeChanged = startTime
-      ? startTime.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "N/A"; // Giá trị mặc định nếu startTime là null
-
-    const endTimeChanged = endTime
-      ? endTime.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "N/A"; // Giá trị mặc định nếu endTime là null
+    const startTimeChanged = startTime ? startTime.toLocaleTimeString() : "N/A";
+    const endTimeChanged = endTime ? endTime.toLocaleTimeString() : "N/A";
 
     return (
       <View style={[GenerateStyles.d_flex, GenerateStyles.marginVertical]}>
@@ -278,7 +243,6 @@ const Calendaring = ({ navigation }) => {
 
   return (
     <SafeAreaView>
-      {/* Header hiển thị ngày và nút chọn ngày */}
       <View
         style={[
           CalenderingStyle.headerContainer,
@@ -301,7 +265,6 @@ const Calendaring = ({ navigation }) => {
           </View>
         </View>
 
-        {/* button show modal----------------------------- */}
         <View style={CalenderingStyle.buttonContainer}>
           <TouchableOpacity style={CalenderingStyle.addButton}>
             <Pressable
@@ -328,9 +291,7 @@ const Calendaring = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
-      {/* end--------------------------- */}
 
-      {/* Nút chọn ngày-------------------------------------------------- */}
       <TouchableOpacity
         onPress={() => setShowDatePicker(true)}
         style={CalenderingStyle.selectDateButton}
@@ -338,7 +299,6 @@ const Calendaring = ({ navigation }) => {
         <Text style={CalenderingStyle.buttonTextSelectDate}>Choose Date</Text>
       </TouchableOpacity>
 
-      {/* Hiển thị DateTimePicker----------------------------------------- */}
       {showDatePicker && (
         <DateTimePicker
           value={selectedDate}
@@ -348,10 +308,8 @@ const Calendaring = ({ navigation }) => {
         />
       )}
 
-      {/* Dấu phân cách */}
       <Text style={[GenerateStyles.horizol_line_traight]}></Text>
-      {/* --------------------- */}
-      {/* Các nút chuyển tuần và hiển thị ngày trong tuần */}
+
       <View
         style={[
           GenerateStyles.d_flex_align_center,
@@ -378,7 +336,7 @@ const Calendaring = ({ navigation }) => {
                         new Date(currentWeekStart).getMonth() &&
                       selectedDate.getFullYear() ===
                         new Date(currentWeekStart).getFullYear()
-                    ? "green" // Nếu selectedDate trùng với ngày trong mảng
+                    ? "green"
                     : date.isToday
                     ? "blue"
                     : "black",
@@ -401,10 +359,8 @@ const Calendaring = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Dấu phân cách */}
       <Text style={[GenerateStyles.horizol_line_traight]}></Text>
-      {/* ------------------ */}
-      {/* Hiển thị danh sách các cuộc họp */}
+
       <View style={GenerateStyles.backGroundWhite}>
         <View style={[styles.d_flex, GenerateStyles.marginVertical]}>
           <Text
@@ -442,7 +398,7 @@ const Calendaring = ({ navigation }) => {
                 GenerateStyles.marginVertical,
               ]}
             >
-              Not meeting!
+              No meetings!
             </Text>
           </View>
         }

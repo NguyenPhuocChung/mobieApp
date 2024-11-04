@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 
-import { fetchProjectByInvite } from "../api/apiservice";
+import { fetchProjectByInvite } from "../api/inviteService";
 import GenerateStyles from "../CSS/Generate";
 import styles from "../CSS/ManageTask";
 
@@ -30,16 +30,27 @@ const ManageTask = ({ navigation }) => {
     setRefreshing(true);
     try {
       const userID = await AsyncStorage.getItem("userId");
-      console.log(userID);
+
       if (userID) {
-        setInviteId(userID); // Set inviteId when userID is available
-        const data = await fetchProjectByInvite(userID); // Fetch projects using userID
+        console.log("User ID:", userID);
+        setInviteId(userID);
+
+        const data = await fetchProjectByInvite(userID);
         console.log("Fetched Projects:", data);
-        setProjects(Array.isArray(data) ? data : []);
+
+        if (Array.isArray(data)) {
+          setProjects(data); // If data is an array, set it
+        } else {
+          setProjects([]); // Handle edge case where data isn't an array
+          console.log("Data is not an array:", data);
+        }
+      } else {
+        console.log("No user ID found in AsyncStorage");
+        setError("User ID is missing.");
       }
     } catch (err) {
-      setError(err.message); // Capture error message
-      console.log("Error fetching data:", err.message); // Log actual error message
+      setError(err.message || "An unknown error occurred");
+      console.error("Error fetching data:", err.message || err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -81,10 +92,10 @@ const ManageTask = ({ navigation }) => {
               styles.d_flex,
               styles.paddingRL,
               item.status === "Ongoing"
-                ? styles.box_status_done
-                : item.status === "Progress"
-                ? styles.box_status_progress
-                : styles.box_status_notstarted,
+                ? [styles.box_status_progress]
+                : item.status === "Not started"
+                ? styles.box_status_notstarted
+                : [styles.box_status_done],
             ]}
           >
             <Text style={[styles.point, styles.point_progress]}></Text>
@@ -92,39 +103,24 @@ const ManageTask = ({ navigation }) => {
               style={[
                 styles.padding_right,
                 item.status === "Ongoing"
-                  ? styles.color_done
-                  : item.status === "Progress"
-                  ? styles.color_progress
-                  : styles.color_notstarted,
+                  ? [styles.color_progress]
+                  : item.status === "Not started"
+                  ? styles.color_notstarted
+                  : styles.color_done,
                 styles.font_size_content,
               ]}
             >
               {item.status}
             </Text>
           </View>
-          <View style={[styles.box_status, styles.d_flex, styles.paddingRL]}>
-            <Image
-              style={[styles.delete_img, styles.padding_right]}
-              source={require("../img/user-add-line.png")}
-            />
-            <Text
-              style={[styles.padding_right, styles.font_size_content]}
-              onPress={() =>
-                navigation.navigate("Invite", {
-                  name: "Invite",
-                })
-              }
-            >
-              Invite
-            </Text>
-          </View>
+
           <View style={[styles.d_flex, styles.paddingRL]}>
             <Image
               style={styles.delete_img}
               source={require("../img/list-check-3.png")}
             />
             <Text style={[styles.padding_right, styles.font_size_content]}>
-              10
+              {item.invite.length}
             </Text>
           </View>
         </View>

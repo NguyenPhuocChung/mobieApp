@@ -12,7 +12,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { registerUser } from "../api/apiservice"; // Import your API functions
+import { registerUser } from "../api/authService"; // Import your API functions
 const Register = () => {
   const [role, setRole] = useState("leader"); // Default role
   const [email, setEmail] = useState("");

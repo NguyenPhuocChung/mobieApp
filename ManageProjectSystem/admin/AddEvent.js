@@ -16,26 +16,26 @@ import AddEventStyles from "../CSS/AddEvent";
 import GenerateStyles from "../CSS/Generate";
 
 const AddEvent = () => {
-  const data = [
-    { label: "Item 1", value: "1" },
-    { label: "Item 2", value: "2" },
-    { label: "Item 3", value: "3" },
-    { label: "Item 4", value: "4" },
-    { label: "Item 5", value: "5" },
-    { label: "Item 6", value: "6" },
-    { label: "Item 7", value: "7" },
-    { label: "Item 8", value: "8" },
-  ];
+  // const data = [
+  //   { label: "Item 1", value: "1" },
+  //   { label: "Item 2", value: "2" },
+  //   { label: "Item 3", value: "3" },
+  //   { label: "Item 4", value: "4" },
+  //   { label: "Item 5", value: "5" },
+  //   { label: "Item 6", value: "6" },
+  //   { label: "Item 7", value: "7" },
+  //   { label: "Item 8", value: "8" },
+  // ];
 
-  const Reminder = [
-    { label: "1 minute", value: "1" },
-    { label: "5 minutes", value: "5" },
-    { label: "10 minutes", value: "10" },
-  ];
+  // const Reminder = [
+  //   { label: "1 minute", value: "1" },
+  //   { label: "5 minutes", value: "5" },
+  //   { label: "10 minutes", value: "10" },
+  // ];
 
   const statusOnOF = [
-    { label: "Online", value: "1" },
-    { label: "Offline", value: "2" },
+    { label: "Online", value: "online" },
+    { label: "Offline", value: "offline" },
   ];
 
   // Get data from the route

@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,75 +12,81 @@ import {
 
 const Home = () => {
   const navigation = useNavigation();
-  const lineWidth = useRef(new Animated.Value(0)).current; // Khởi tạo Animated.Value
+  const lineWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Bắt đầu animation khi component được mount
     Animated.timing(lineWidth, {
-      toValue: 50, // Đến 50%
-      duration: 1000, // Thời gian animation (1 giây)
-      useNativeDriver: false, // Sử dụng Native Driver
+      toValue: 50,
+      duration: 1000,
+      useNativeDriver: false,
     }).start();
   }, [lineWidth]);
+
+  const sections = [
+    {
+      title: "Notification",
+      data: [
+        {
+          icon: "notifications",
+          title: "Notification",
+          navigateTo: "Notification",
+        },
+      ],
+    },
+    {
+      title: "Manager",
+      data: [
+        {
+          icon: "briefcase",
+          title: "Manager Project",
+          navigateTo: "Project",
+        },
+        {
+          icon: "person",
+          title: "Manager Member",
+          navigateTo: "ManageMember",
+        },
+      ],
+    },
+    {
+      title: "Status all task",
+      data: [
+        {
+          icon: "list",
+          title: "Manager Task",
+          navigateTo: "StatusAllTask",
+        },
+      ],
+    },
+  ];
+
+  const renderSection = ({ item }) => (
+    <Section title={item.title}>
+      {item.data.map((card, index) => (
+        <IconCard
+          key={index}
+          icon={card.icon}
+          title={card.title}
+          onPress={() => {
+            if (card.navigateTo) {
+              navigation.navigate(card.navigateTo);
+            }
+          }}
+        />
+      ))}
+    </Section>
+  );
 
   return (
     <View style={styles.container}>
       <View style={styles.main}>
-        <Section title="Notification">
-          <IconCard icon="notifications" title="Notification" />
-        </Section>
-        {/* Đường kẻ ngang với animation */}
-        <Animated.View
-          style={[
-            styles.line,
-            {
-              width: lineWidth.interpolate({
-                inputRange: [0, 100],
-                outputRange: ["0%", "50%"],
-              }),
-            },
-          ]}
+        <FlatList
+          data={sections}
+          renderItem={renderSection}
+          keyExtractor={(item) => item.title}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 20 }}
         />
-        <Section title="Manager">
-          <IconCard
-            icon="briefcase"
-            title="Manager Project"
-            onPress={() =>
-              navigation.navigate("Project", {
-                name: "Project",
-              })
-            } // Điều hướng đến Manager Project
-          />
-
-          <IconCard
-            icon="person"
-            title="Manager Member"
-            onPress={() => navigation.navigate("ManageMember")} // Điều hướng đến Manager Member
-          />
-        </Section>
-        <Animated.View
-          style={[
-            styles.line,
-            {
-              width: lineWidth.interpolate({
-                inputRange: [0, 100],
-                outputRange: ["0%", "50%"],
-              }),
-            },
-          ]}
-        />
-        {/* manage status all task */}
-        <Section title="Status all task">
-          <IconCard
-            icon="list"
-            title="Manager Task"
-            onPress={() =>
-              navigation.navigate("StatusAllTask", {
-                name: "StatusAllTask",
-              })
-            } // Điều hướng đến Manager Project
-          />
-        </Section>
       </View>
     </View>
   );
@@ -93,7 +100,11 @@ const Section = ({ title, children }) => (
 );
 
 const IconCard = ({ icon, title, onPress }) => (
-  <TouchableOpacity onPress={onPress} style={styles.iconCard}>
+  <TouchableOpacity
+    onPress={onPress}
+    style={styles.iconCard}
+    accessibilityLabel={title}
+  >
     <Ionicons name={icon} size={48} color="green" />
     <Text style={styles.cardTitle}>{title}</Text>
   </TouchableOpacity>
@@ -101,9 +112,9 @@ const IconCard = ({ icon, title, onPress }) => (
 
 const styles = StyleSheet.create({
   line: {
-    height: 1, // Chiều cao của đường kẻ
-    backgroundColor: "gray", // Màu nền của đường kẻ
-    marginVertical: 10, // Khoảng cách trên và dưới đường kẻ
+    height: 1,
+    backgroundColor: "gray",
+    marginVertical: 10,
   },
   container: {
     flex: 1,

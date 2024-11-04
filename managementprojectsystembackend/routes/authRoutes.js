@@ -7,6 +7,7 @@ const {
   updateProjectById,
   findProjectById,
   getProjectsByInvite,
+  updateProjectStatus,
 } = require("../controllers/projectController");
 const {
   addTask,
@@ -16,6 +17,7 @@ const {
   findAllTasksById,
   findAllTasksByProjectId,
   getTasksByInvite,
+  updateTaskStatus,
 } = require("../controllers/taskController");
 const { login, register } = require("../controllers/authController");
 const {
@@ -23,6 +25,7 @@ const {
   addCalendaring,
   updateCalendaring,
   deleteCalendaring,
+  getAllCalendaring,
 } = require("../controllers/calenderingController");
 const {
   findAccountsById,
@@ -36,6 +39,7 @@ const {
 } = require("../controllers/commentController");
 const app = express();
 const {
+  findAccountsByRole,
   findAccountsByLeaderRole,
   findAccountsByMemberRole,
   deleteAccountById,
@@ -50,6 +54,7 @@ router.get("/tasks", findAllTasks);
 router.get("/taskById/:id", findAllTasksById);
 router.get("/taskByIdProject/:projectId", findAllTasksByProjectId);
 router.get("/tasksByInvite/:inviteId", getTasksByInvite);
+router.put("/task/:id/status", updateTaskStatus); // Sử dụng PATCH cho việc cập nhật một phần
 
 router.delete("/deleteTask/:id", deleteTasksById);
 router.put("/updateTask/:id", updateTasksById);
@@ -58,9 +63,12 @@ router.post("/addProject", addProject);
 router.delete("/deleteProject/:id", deleteProjectById);
 router.put("/updateProject/:id", updateProjectById);
 router.get("/projectsByInvite/:inviteId", getProjectsByInvite);
+router.put("/project/:id/status", updateProjectStatus); // Sử dụng PATCH cho việc cập nhật một phần
 
 //
 router.get("/calendering/:date", calendaring);
+router.get("/getAllCalendering", getAllCalendaring);
+
 router.post("/addCalendaring", addCalendaring);
 router.delete("/deleteCalendaring/:id", deleteCalendaring);
 router.put("/updateCalendaring/:id", updateCalendaring);
@@ -69,7 +77,7 @@ router.put("/updateCalendaring/:id", updateCalendaring);
 router.get("/projects", findProject);
 router.get("/projectsById/:id", findProjectById);
 //
-router.get("/invitemember", findAccountsByMemberRole);
+router.get("/invitemember/:userRole", findAccountsByRole);
 router.get("/account/:id", findAccountsById);
 router.get("/allaccount", findAccounts);
 router.put("/upload/:id", uploadAvatar);

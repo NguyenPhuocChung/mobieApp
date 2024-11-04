@@ -3,7 +3,7 @@ import { useNavigation } from "@react-navigation/native"; // Import useNavigatio
 import React, { useEffect, useState } from "react";
 import { Image, TouchableOpacity, View } from "react-native";
 import FooterStyles from "../CSS/Footer";
-import { fetchCalendarData } from "../api/apiservice"; // Import hàm fetchCalendarData
+import { fetchCalendarData } from "../api/calendarService"; // Import hàm fetchCalendarData
 
 const Footer = () => {
   const [role, setRole] = useState("");
@@ -108,15 +108,6 @@ const Footer = () => {
         </TouchableOpacity>
       )}
       {/* Nút Chat - Hiển thị cho cả Leader và Member */}
-      <TouchableOpacity
-        onPress={() => handleLinkPress("Chat")}
-        style={FooterStyles.width}
-      >
-        <Image
-          source={require("../img/message-square.png")}
-          style={{ tintColor: activeLink === "Chat" ? "#21BD31" : "white" }} // Tô màu cho icon khi được chọn
-        />
-      </TouchableOpacity>
 
       {/* Nút Account - Hiển thị cho cả Leader và Member */}
       <TouchableOpacity

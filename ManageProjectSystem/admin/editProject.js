@@ -1,3 +1,4 @@
+import DateTimePicker from "@react-native-community/datetimepicker"; // Import datetimepicker
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -6,19 +7,20 @@ import {
   StatusBar,
   Text,
   TextInput,
+  View,
 } from "react-native";
 import styles from "../CSS/ManageTask"; // Chỉnh sửa đường dẫn nếu cần
-import { editProjectById, fetchProjectById } from "../api/apiservice"; // API để cập nhật và lấy thông tin dự án
+import { editProjectById, fetchProjectById } from "../api/projectService"; // API để cập nhật và lấy thông tin dự án
 
 const EditProject = ({ route, navigation }) => {
   const { item } = route.params; // Nhận projectId từ props
   const [project, setProject] = useState(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startDate, setStartDate] = useState(new Date()); // Thay đổi để lưu trữ ngày
+  const [endDate, setEndDate] = useState(new Date()); // Thay đổi để lưu trữ ngày
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false); // Trạng thái cho picker ngày bắt đầu
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false); // Trạng thái cho picker ngày kết thúc
   const [invite, setInvite] = useState("");
   const [labels, setLabels] = useState("");
   const [status, setStatus] = useState("");
@@ -31,10 +33,8 @@ const EditProject = ({ route, navigation }) => {
       setProject(data);
       setTitle(data.title);
       setDescription(data.description);
-      setStartDate(data.startDate);
-      setStartTime(data.startTime);
-      setEndDate(data.endDate);
-      setEndTime(data.endTime);
+      setStartDate(new Date(data.startDate)); // Chuyển đổi dữ liệu thành đối tượng Date
+      setEndDate(new Date(data.endDate)); // Chuyển đổi dữ liệu thành đối tượng Date
       setInvite(data.invite);
       setLabels(data.labels);
       setStatus(data.status);
@@ -52,10 +52,8 @@ const EditProject = ({ route, navigation }) => {
     const updatedProject = {
       title,
       description,
-      startDate: new Date(startDate).toISOString(),
-      startTime: new Date(startTime).toISOString(),
-      endDate: new Date(endDate).toISOString(),
-      endTime: new Date(endTime).toISOString(),
+      startDate: startDate.toISOString(), // Chuyển đổi thành chuỗi
+      endDate: endDate.toISOString(), // Chuyển đổi thành chuỗi
       invite,
       labels,
       status,
@@ -69,6 +67,18 @@ const EditProject = ({ route, navigation }) => {
     } catch (err) {
       Alert.alert("Error", err.message);
     }
+  };
+
+  const onChangeStartDate = (event, selectedDate) => {
+    const currentDate = selectedDate || startDate;
+    setShowStartDatePicker(false);
+    setStartDate(currentDate);
+  };
+
+  const onChangeEndDate = (event, selectedDate) => {
+    const currentDate = selectedDate || endDate;
+    setShowEndDatePicker(false);
+    setEndDate(currentDate);
   };
 
   if (!project) {
@@ -92,30 +102,36 @@ const EditProject = ({ route, navigation }) => {
         style={styles.input}
         multiline
       />
-      <TextInput
-        placeholder="Start Date (YYYY-MM-DD)"
-        value={startDate}
-        onChangeText={setStartDate}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Start Time (HH:MM)"
-        value={startTime}
-        onChangeText={setStartTime}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="End Date (YYYY-MM-DD)"
-        value={endDate}
-        onChangeText={setEndDate}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="End Time (HH:MM)"
-        value={endTime}
-        onChangeText={setEndTime}
-        style={styles.input}
-      />
+      <View>
+        <Button
+          onPress={() => setShowStartDatePicker(true)}
+          title="Select Start Date"
+        />
+        {showStartDatePicker && (
+          <DateTimePicker
+            value={startDate}
+            mode="date"
+            display="default"
+            onChange={onChangeStartDate}
+          />
+        )}
+        <Text>Start Date: {startDate.toLocaleDateString()}</Text>
+      </View>
+      <View>
+        <Button
+          onPress={() => setShowEndDatePicker(true)}
+          title="Select End Date"
+        />
+        {showEndDatePicker && (
+          <DateTimePicker
+            value={endDate}
+            mode="date"
+            display="default"
+            onChange={onChangeEndDate}
+          />
+        )}
+        <Text>End Date: {endDate.toLocaleDateString()}</Text>
+      </View>
       <TextInput
         placeholder="Invite"
         value={invite}

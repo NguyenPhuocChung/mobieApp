@@ -15,7 +15,13 @@ import {
 
 import { useIsFocused } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons"; // Thay đổi bộ icon tùy ý
-import { deleteTaskById, fetchTaskByIdProject } from "../api/apiservice";
+import { fetchTaskByIdProject } from "../api/apiservice";
+import {
+  deleteTaskById,
+  updateProjectStatus,
+  updateTaskStatus,
+} from "../api/taskService";
+
 import Generate from "../CSS/Generate";
 import styles from "../CSS/ManageTask";
 import statusmember from "../CSS/StatusMember";
@@ -29,23 +35,75 @@ const ListTask = ({ navigation }) => {
   const { data } = route.params;
   const isFocused = useIsFocused(); // Kiểm tra trạng thái focus của màn hình
   const [searchQuery, setSearchQuery] = useState(""); // Trạng thái tìm kiếm
+  const [status, setStatus] = useState("Done"); // Trạng thái ban đầu
+  const [statusProject, setStatusProject] = useState("Ongoing"); // Trạng thái ban đầu
 
   const time = data.createdAt ? new Date(data.createdAt) : null;
   const timeCreateAt = time ? time.toLocaleDateString() : "";
-
-  const task = async () => {
-    const projectId = data._id;
-    setLoading(true);
-    setRefreshing(true); // Bắt đầu trạng thái refreshing
+  const handleUpdateStatus = async (id) => {
+    console.log("====================================");
+    console.log(id, status);
+    console.log("====================================");
     try {
-      const taskData = await fetchTaskByIdProject(projectId); // Lấy dữ liệu tác vụ
-      setTasks(taskData); // Lưu dữ liệu vào state
-      console.log("task", taskData); // In ra dữ liệu để debug
+      const updatedTask = await updateTaskStatus(id, status);
+      if (updatedTask) {
+        // Cập nhật giao diện hoặc thông báo thành công cho người dùng
+        console.log("Updated task:", updatedTask);
+        Alert.alert("Updated task:", updatedTask);
+
+        task();
+      }
+    } catch (error) {
+      // Xử lý lỗi, có thể thông báo cho người dùng
+      console.error("Failed to update task status:", error);
+    }
+  };
+  //
+  const handleUpdateStatusProject = async (id) => {
+    console.log("====================================");
+    console.log(id, status);
+    console.log("====================================");
+    try {
+      const updatedTask = await updateProjectStatus(id, statusProject);
+      if (updatedTask) {
+        // Cập nhật giao diện hoặc thông báo thành công cho người dùng
+        console.log("Updated task:", updatedTask);
+        Alert.alert(
+          "Task Updated",
+          `The task "${updatedTask.title}" has been updated to status: "${updatedTask.status}".`
+        );
+
+        task();
+      }
+    } catch (error) {
+      // Xử lý lỗi, có thể thông báo cho người dùng
+      console.error("Failed to update task status:", error);
+      Alert.alert(
+        "Update Failed",
+        "There was an error updating the task. Please try again."
+      );
+    }
+  };
+  const task = async () => {
+    const projectId = data?._id; // Safely access the projectId
+    if (!projectId) {
+      console.error("No valid projectId found.");
+      setError("Project ID is missing.");
+      return;
+    }
+
+    setLoading(true);
+    setRefreshing(true); // Start refreshing state
+    try {
+      const taskData = await fetchTaskByIdProject(projectId); // Fetch task data by project ID
+      setTasks(Array.isArray(taskData) ? taskData : []); // Ensure taskData is an array
+      console.log("Task data:", taskData); // Debug the fetched data
     } catch (err) {
-      setError(err.message); // Lưu lỗi nếu có
+      setError(err.message || "An error occurred while fetching tasks.");
+      console.error("Error fetching tasks:", err.message || err); // Improved error logging
     } finally {
-      setLoading(false); // Đánh dấu rằng việc tải dữ liệu đã hoàn tất
-      setRefreshing(false); // Kết thúc trạng thái refreshing
+      setLoading(false); // Mark loading as complete
+      setRefreshing(false); // End refreshing state
     }
   };
 
@@ -64,6 +122,7 @@ const ListTask = ({ navigation }) => {
           text: "Edit",
           onPress: () => editProject(item),
         },
+
         {
           text: "Delete",
           onPress: () => deleteProject(item),
@@ -148,7 +207,9 @@ const ListTask = ({ navigation }) => {
                 statusmember.marginBottom,
               ]}
             >
-              {item.invite.fullName}
+              {item && item.createrBy.fullName
+                ? item.createrBy.fullName
+                : "Null"}
             </Text>
             <Text
               style={[Generate.sizeTitles, statusmember.text_box_status_member]}
@@ -165,26 +226,63 @@ const ListTask = ({ navigation }) => {
               {item.description}
             </Text>
           </View>
-          <View>
+          <View style={[Generate.d_flex_align_center, { gap: 10 }]}>
+            <View style={[styles.box_status, styles.d_flex, styles.paddingRL]}>
+              <Image
+                style={[styles.delete_img, styles.padding_right]}
+                source={require("../img/user-add-line.png")}
+              />
+              <Text style={[styles.padding_right, styles.font_size_content]}>
+                {item.invite.fullName}
+              </Text>
+            </View>
             <View
               style={[
                 styles.box_status,
                 styles.d_flex,
                 styles.paddingRL,
-                styles.box_status_progress,
+                item.status === "Not started"
+                  ? styles.box_status_notstarted
+                  : item.status === "Ongoing"
+                  ? styles.box_status_progress
+                  : item.status === "Done"
+                  ? [styles.box_status_done]
+                  : null, // Nếu không thuộc các trạng thái trên, không áp dụng kiểu nào
               ]}
             >
               <Text style={[styles.point, styles.point_progress]}></Text>
               <Text
                 style={[
                   styles.padding_right,
-                  styles.color_progress,
                   styles.font_size_content,
+                  item.status === "Not started"
+                    ? styles.color_notstarted
+                    : item.status === "Ongoing"
+                    ? styles.color_ongoing
+                    : item.status === "Done"
+                    ? [styles.color_done]
+                    : null, // Nếu không thuộc các trạng thái trên, không áp dụng kiểu nào
                 ]}
               >
                 {item.status}
               </Text>
             </View>
+            {item.status === "Done" ? (
+              <Text></Text>
+            ) : (
+              <TouchableOpacity onPress={() => handleUpdateStatus(item._id)}>
+                <Text
+                  style={[
+                    styles.font_size_content,
+                    Generate.box_status_progress,
+                    Generate.box_status_progress,
+                    Generate.box,
+                  ]}
+                >
+                  Verify
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
@@ -210,9 +308,27 @@ const ListTask = ({ navigation }) => {
           >
             {data.createrBy ? data.createrBy.fullName : "Unknown Creator"}
           </Text>
-          <Text style={[styles.font_size_name]}>
+          <Text style={[styles.font_size_name, styles.margin_right]}>
             opened this issue on {timeCreateAt}
           </Text>
+          {data.status === "Ongoing" || data.status === "Done" ? (
+            <Text></Text>
+          ) : (
+            <TouchableOpacity
+              onPress={() => handleUpdateStatusProject(data._id)}
+            >
+              <Text
+                style={[
+                  styles.font_size_content,
+                  Generate.box_status_notstarted,
+                  Generate.box_status_notstarted,
+                  Generate.box,
+                ]}
+              >
+                {data.status}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
         <Text style={[styles.horizol, styles.margin_vertical]}></Text>
         <Button

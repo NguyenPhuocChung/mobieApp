@@ -1,69 +1,172 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Button,
   FlatList,
+  Image,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
-import FontAwesome from "react-native-vector-icons/FontAwesome";
+import { fetchCalendar } from "../api/calendarService";
+import CalenderingStyle from "../CSS/Calendering";
+import GenerateStyles from "../CSS/Generate";
+import URL from "../midleware/authMidleware";
 
-const chung = [
-  {
-    id: "1",
-    title:
-      "[P.ĐT] Thông báo DSSV không đủ điều kiện dự thi điểm danh các môn DTR103, ENT001, ENT104, ENT203, ENT303, ENT403, ENT503, VOV114 half 1 kỳ FA24",
-    date: "19/10/2024",
-  },
-  {
-    id: "2",
-    title:
-      "[Khảo thí] Thông báo lịch progress test các môn AFA201, DRP101, TPG302 kỳ FA24",
-    date: "16/10/2024",
-  },
-  {
-    id: "3",
-    title: "[Khảo thí] Thông báo lịch thi thực hành các môn kỳ FA24",
-    date: "16/10/2024",
-  },
-  {
-    id: "4",
-    title:
-      "[Khảo thí] Thông báo điều chỉnh lịch thi thực hành môn PRN212 kỳ FA24",
-    date: "15/10/2024",
-  },
-  {
-    id: "5",
-    title:
-      "[P.ĐT] Thông báo DSSV không đủ điều kiện dự thi điểm danh môn KRL112 half 1 kỳ FA24",
-    date: "13/10/2024",
-  },
-];
+const Notification = ({ navigation }) => {
+  const [calendarGetDate, setCalendarGetDate] = useState([]);
+  const [chung, setChung] = useState([]); // Original calendar data
+  const [filteredData, setFilteredData] = useState([]); // Filtered data
+  const [searchTerm, setSearchTerm] = useState(""); // Search term state
+  const [refreshing, setRefreshing] = useState(false); // Refresh state
 
-const Notification = () => {
+  const getData = async () => {
+    try {
+      const calendarData = await fetchCalendar(); // Fetch data from API
+      setCalendarGetDate(calendarData);
+      setChung(calendarData); // Assuming you want to use 'calendarData' here
+      setFilteredData(calendarData); // Initialize filtered data
+      console.log("Data fetched: ", calendarData);
+    } catch (error) {
+      console.log("Error fetching data: ", error);
+    }
+  };
+
+  useEffect(() => {
+    getData();
+  }, []);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await getData(); // Fetch new data when refreshing
+    setRefreshing(false);
+  };
+
+  // Handle search input and filter the results
+  const handleSearch = (text) => {
+    setSearchTerm(text);
+
+    // Filter the data based on the search term
+    if (text) {
+      const filtered = chung.filter((item) =>
+        item.description.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredData(filtered);
+    } else {
+      setFilteredData(chung); // Reset to original data when search is cleared
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.searchBar}>
-        <TextInput style={styles.input} placeholder="Search..." />
-        <Button title="🔍" onPress={() => {}} color="#ff9800" />
+        <TextInput
+          style={styles.input}
+          placeholder="Search..."
+          value={searchTerm}
+          onChangeText={handleSearch} // Handle search input
+        />
       </View>
-      <Text style={styles.resultText}>Showing {chung.length} results</Text>
+      <Text style={styles.resultText}>
+        Showing {filteredData.length} results
+      </Text>
       <FlatList
-        data={chung}
+        data={filteredData}
         renderItem={({ item }) => (
           <View style={styles.notificationItem}>
-            <Text>{item.title}</Text>
-            <Text style={styles.dateText}>Date: {item.date}</Text>
+            <Text
+              style={[GenerateStyles.sizeTitles, GenerateStyles.color]}
+              ellipsizeMode="tail"
+            >
+              {item.title}
+            </Text>
+            <Text
+              style={[
+                GenerateStyles.italic,
+                GenerateStyles.sizeDescription,
+                GenerateStyles.color,
+              ]}
+              ellipsizeMode="tail"
+              onPress={() =>
+                navigation.navigate("DetailMeeting", {
+                  name: "DetailMeeting",
+                  meeting: item,
+                  startTime: item.startTime,
+                  endTime: item.endTime,
+                })
+              }
+            >
+              {item.description}
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                CalenderingStyle.buttonMeeting,
+                GenerateStyles.d_flex_align_center,
+                GenerateStyles.marginVertical,
+              ]}
+              onPress={() => console.log("Google Meet link:", item.link)}
+            >
+              <Image
+                style={[
+                  CalenderingStyle.img_googleMeet,
+                  GenerateStyles.marginRight,
+                ]}
+                source={require("../img/googlemeet.png")}
+              />
+              <Text
+                style={{
+                  color: "blue",
+                  textDecorationLine: "underline",
+                }}
+              >
+                {item.link}
+              </Text>
+            </TouchableOpacity>
+
+            <View
+              style={[
+                GenerateStyles.d_flex_align_center,
+                GenerateStyles.justify_between,
+              ]}
+            >
+              <View style={[GenerateStyles.d_flex]}>
+                <Image
+                  source={{
+                    uri: `http://${URL.BASE_URL}:5000/${item.createrBy.avatar}`,
+                  }}
+                  style={styles.avatar}
+                />
+                <Text
+                  style={[
+                    { marginLeft: 10 },
+                    GenerateStyles.sizeSubtext,
+                    GenerateStyles.colorTime,
+                  ]}
+                >
+                  {item.createrBy?.fullName || "Unknown Creator"}{" "}
+                  {/* Display fullName or fallback */}
+                </Text>
+              </View>
+              <View style={GenerateStyles.d_flex_align_center}>
+                <Text
+                  style={
+                    item.status === "online"
+                      ? GenerateStyles.red
+                      : GenerateStyles.green
+                  }
+                >
+                  {item.status}
+                </Text>
+              </View>
+            </View>
           </View>
         )}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id.toString()}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        } // Adding pull-to-refresh control
       />
-      <View style={styles.footer}>
-        <FontAwesome name="home" size={24} color="white" />
-        <FontAwesome name="bell" size={24} color="white" />
-        <FontAwesome name="user" size={24} color="white" />
-      </View>
     </View>
   );
 };
@@ -73,38 +176,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f5f5f5",
     marginHorizontal: 20,
-  },
-  header: {
-    backgroundColor: "#ff9800",
-    padding: 10,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  icon: {
-    position: "absolute",
-    left: 10,
-    top: 12,
-  },
-  headerText: {
-    color: "white",
-    fontSize: 20,
-    textAlign: "center",
-    flex: 1,
+    marginBottom: 100,
   },
   searchBar: {
     flexDirection: "row",
     justifyContent: "center",
     padding: 10,
-    backgroundColor: "white",
   },
   input: {
     width: "80%",
     padding: 10,
     borderColor: "#ff9800",
     borderWidth: 1,
-    borderRadius: 20,
-    borderTopLeftRadius: 20,
-    borderBottomLeftRadius: 20,
+    borderRadius: 10,
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
+  },
+  resultText: {
+    textAlign: "center",
+    marginVertical: 10,
   },
   notificationItem: {
     backgroundColor: "white",
@@ -117,22 +207,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  dateText: {
-    color: "#808080", // màu xám
-    marginTop: 5,
-  },
-  resultText: {
-    textAlign: "center",
-    marginVertical: 10,
-  },
-  footer: {
-    backgroundColor: "#ff9800",
-    padding: 10,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
+  avatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 50,
+    marginBottom: 10,
   },
 });
 

@@ -14,7 +14,7 @@ const calendaring = async (req, res) => {
     // Tìm kiếm trong cơ sở dữ liệu với startDate trong khoảng thời gian
     const calendarData = await Calendaring.find({
       startDate: { $gte: startDate, $lt: endDate },
-    });
+    }).populate("createrBy");
 
     res.status(200).json(calendarData);
   } catch (error) {
@@ -97,7 +97,19 @@ const deleteCalendaring = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+const getAllCalendaring = async (req, res) => {
+  try {
+    // Tìm kiếm trong cơ sở dữ liệu với startDate trong khoảng thời gian
+    const calendarData = await Calendaring.find().populate("createrBy");
+    res.status(200).json(calendarData);
+  } catch (error) {
+    console.error("Error fetching calendar data:", error);
+    res.status(500).json({ error: "Failed to fetch calendar data" });
+  }
+};
 module.exports = {
+  getAllCalendaring,
   calendaring,
   addCalendaring,
   deleteCalendaring,

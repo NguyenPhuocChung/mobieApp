@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import GenerateStyles from "../CSS/Generate";
 import styles from "../CSS/ManageTask";
-import { deleteProjectById, fetchProjects } from "../api/apiservice"; // Corrected import
+import { deleteProjectById, fetchProjects } from "../api/projectService"; // Corrected import
 
 const ManageProject = ({ navigation }) => {
   const [projects, setProjects] = useState([]); // State to store the list of projects
@@ -23,7 +23,6 @@ const ManageProject = ({ navigation }) => {
   const [error, setError] = useState(null); // State to manage errors
   const [refreshing, setRefreshing] = useState(false); // State to manage refresh status
   const [searchQuery, setSearchQuery] = useState(""); // Trạng thái tìm kiếm
-
   // Function to load the list of projects
   const loadProjects = async () => {
     setLoading(true);
@@ -134,10 +133,10 @@ const ManageProject = ({ navigation }) => {
               styles.d_flex,
               styles.paddingRL,
               item.status === "Ongoing"
-                ? [styles.box_status_done]
-                : item.status === "Progress"
                 ? [styles.box_status_progress]
-                : styles.box_status_notstarted,
+                : item.status === "Not started"
+                ? styles.box_status_notstarted
+                : [styles.box_status_done],
             ]}
           >
             <Text style={[styles.point, styles.point_progress]}></Text>
@@ -145,41 +144,26 @@ const ManageProject = ({ navigation }) => {
               style={[
                 styles.padding_right,
                 item.status === "Ongoing"
-                  ? [styles.color_done]
-                  : item.status === "Progress"
                   ? [styles.color_progress]
-                  : styles.color_notstarted,
+                  : item.status === "Not started"
+                  ? styles.color_notstarted
+                  : styles.color_done,
                 styles.font_size_content,
               ]}
             >
               {item.status}
             </Text>
           </View>
-          <View style={[styles.box_status, styles.d_flex, styles.paddingRL]}>
-            <Image
-              style={[styles.delete_img, styles.padding_right]}
-              source={require("../img/user-add-line.png")}
-            />
-            <Text
-              style={[styles.padding_right, styles.font_size_content]}
-              onPress={() =>
-                navigation.navigate("Invite", {
-                  name: "Invite",
-                })
-              }
-            >
-              Invite
-            </Text>
-          </View>
-          <View style={[styles.d_flex, styles.paddingRL]}>
+
+          {/* <View style={[styles.d_flex, styles.paddingRL]}>
             <Image
               style={styles.delete_img}
               source={require("../img/list-check-3.png")}
             />
-            <Text style={[styles.padding_right, styles.font_size_content]}>
-              10
-            </Text>
-          </View>
+            {/* <Text style={[styles.padding_right, styles.font_size_content]}>
+              {item.invite.length || 0}
+            </Text> */}
+          {/* </View>  */}
         </View>
       </View>
     </View>
@@ -200,6 +184,7 @@ const ManageProject = ({ navigation }) => {
       </SafeAreaView>
     );
   }
+  ////////////////////////////////
   const filteredProjects = projects.filter((project) =>
     project.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -259,7 +244,7 @@ const ManageProject = ({ navigation }) => {
       />
       {projects.length === 0 ? (
         <View style={{ padding: 20, alignItems: "center" }}>
-          <Text style={{ fontSize: 16, color: "black" }}>No Projects.</Text>
+          <Text style={{ fontSize: 16, color: "red" }}>No Projects.</Text>
         </View>
       ) : (
         <FlatList

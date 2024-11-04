@@ -1,47 +1,63 @@
 const Accounts = require("../models/accountModel");
 const Project = require("../models/addProjectModel"); // Import model dự án
+const multer = require("multer");
+const path = require("path");
 
-const addProject = async (req, res) => {
-  const {
-    title,
-    description,
-    startDate,
-    startTime,
-    endDate,
-    endTime,
-    invite,
-    labels,
-    status,
-    createrBy,
-  } = req.body;
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "file/"); // Đường dẫn nơi lưu file
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname); // Đặt tên file
+  },
+});
+const upload = multer({ storage });
 
-  try {
-    const newProject = new Project({
-      title,
-      description,
-      startDate,
-      startTime,
-      endDate,
-      endTime,
-      invite,
-      labels,
-      status,
-      createrBy,
-    });
+const addProject = [
+  upload.single("file"),
+  async (req, res) => {
+    console.log("Request Body:", req.body);
 
-    const savedProject = await newProject.save();
-    res.status(201).json(savedProject);
-  } catch (error) {
-    console.error("Error creating task:", error); // Cập nhật thông báo lỗi
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
+    try {
+      if (!req.body.data) {
+        return res
+          .status(400)
+          .json({ message: "Missing project data in request body" });
+      }
+
+      let projectData;
+      try {
+        projectData = JSON.parse(req.body.data); // Parse JSON data from formData
+      } catch (parseError) {
+        console.error("Error parsing project data:", parseError);
+        return res
+          .status(400)
+          .json({ message: "Invalid JSON format for project data" });
+      }
+
+      console.log("Parsed Project Data:", projectData);
+
+      // Create a new project object
+      const newProject = new Project({
+        ...projectData,
+        file: req.file ? req.file.filename : null, // Add file path if a file is uploaded
+      });
+
+      // Save the project to the database
+      const savedProject = await newProject.save();
+      res.status(201).json(savedProject);
+    } catch (error) {
+      console.error("Error creating project:", error); // Log error for debugging
+      res.status(500).json({ message: "Server error", error: error.message });
+    }
+  },
+];
 
 const findProject = async (req, res) => {
   try {
     const allProject = await Project.find()
       .populate("createrBy", "fullName")
-      .populate("invite", "fullName"); // Lấy fullName từ Accounts
+      .populate("invite"); // Lấy fullName từ Accounts
     res.status(200).json(allProject); // Gửi phản hồi JSON với tất cả dự án
     console.log(JSON.stringify(allProject, null, 2));
   } catch (error) {
@@ -137,7 +153,34 @@ const getProjectsByInvite = async (req, res) => {
       .json({ message: "Server error. Could not fetch projects." });
   }
 };
+
+// Controller để cập nhật chỉ status của task
+const updateProjectStatus = async (req, res) => {
+  const { id } = req.params; // ID project từ params
+  const { status } = req.body; // Status mới
+  console.log("====================================");
+  console.log(id, status);
+  console.log("====================================");
+  try {
+    const updatedTask = await Project.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedTask) {
+      return res.status(404).json({ message: "Task not found" }); // Trả về lỗi nếu không tìm thấy task
+    }
+
+    return res.status(200).json(updatedTask);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error", error });
+  }
+};
+
 module.exports = {
+  updateProjectStatus,
   addProject,
   findProject,
   updateProjectById,

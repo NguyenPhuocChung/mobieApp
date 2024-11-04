@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Dimensions, FlatList, StyleSheet, Text, View } from "react-native";
+import { Dimensions, StyleSheet, Text, View } from "react-native";
 import { BarChart } from "react-native-chart-kit";
 import { SafeAreaView } from "react-native-safe-area-context";
 const screenWidth = Dimensions.get("window").width;
@@ -11,18 +11,7 @@ const DashboardLeader = () => {
     notStarted: 5,
   });
 
-  const teamMembers = [
-    { id: "1", name: "Nguyễn Văn A", completedTasks: 10 },
-    { id: "2", name: "Trần Thị B", completedTasks: 8 },
-    { id: "3", name: "Lê Văn C", completedTasks: 5 },
-    { id: "4", name: "Phạm Thị D", completedTasks: 7 },
-    { id: "5", name: "Nguyễn Văn E", completedTasks: 3 },
-  ];
-
   // Sắp xếp danh sách thành viên theo hiệu quả công việc (nhiệm vụ hoàn thành)
-  const sortedMembers = teamMembers.sort(
-    (a, b) => b.completedTasks - a.completedTasks
-  );
 
   const chartData = {
     labels: ["Completed", "In Progress", "Not Started"],
@@ -84,20 +73,6 @@ const DashboardLeader = () => {
         </View>
       </View>
       {/* Phần Tổng hợp dữ liệu hiệu suất */}
-      <Text style={styles.performanceTitle}>Tổng hợp dữ liệu hiệu suất</Text>
-      <FlatList
-        data={sortedMembers}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => (
-          <View style={styles.memberItem}>
-            <Text style={styles.memberRank}>{index + 1}.</Text>
-            <Text style={styles.memberName}>{item.name}</Text>
-            <Text style={styles.memberTasks}>
-              Nhiệm vụ hoàn thành: {item.completedTasks}
-            </Text>
-          </View>
-        )}
-      />
     </SafeAreaView>
   );
 };

@@ -89,9 +89,6 @@ const Leader = () => {
         <Ionicons name="log-out-outline" size={20} color="#4CAF50" />
         <Text style={styles.menuItem}>Signout</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => setModalVisible(false)}>
-        <Text style={styles.closeModal}>Close</Text>
-      </TouchableOpacity>
     </View>
   );
 

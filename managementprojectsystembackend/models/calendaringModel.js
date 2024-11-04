@@ -10,7 +10,7 @@ const calendaringSchema = new mongoose.Schema(
     startTime: { type: String, required: true }, // Thời gian bắt đầu (hh:mm)
     endTime: { type: String, required: true }, // Thời gian kết thúc (hh:mm)
     link: { type: String, required: true }, // Link sự kiện (URL)
-    createrBy: { type: mongoose.Schema.Types.ObjectId, ref: "Account" }, // Người tạo sự kiện{ type: mongoose.Schema.Types.ObjectId, ref: "Accounts" }
+    createrBy: { type: mongoose.Schema.Types.ObjectId, ref: "Accounts" }, // Người tạo sự kiện{ type: mongoose.Schema.Types.ObjectId, ref: "Accounts" }
     status: { type: String, required: true }, // Trạng thái (active, completed, etc.)
   },
   { timestamps: true } // Thêm createdAt và updatedAt

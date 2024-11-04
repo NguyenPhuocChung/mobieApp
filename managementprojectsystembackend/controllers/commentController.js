@@ -47,22 +47,23 @@ exports.addComment = [
 // Lấy tất cả các bình luận của một dự án
 exports.getCommentsByTask = async (req, res) => {
   try {
-    const tasksId = req.params.idTask; // Lấy tasksId từ tham số URL
+    const tasksId = req.params.idTask; // Extract the task ID from the URL parameters
+    console.log(tasksId);
 
-    // Tìm tất cả bình luận liên quan đến tasksId
-    const comments = await Comment.find({ tasksId: tasksId }).populate(
-      "userId",
-      "fullName"
-    );
+    // Fetch all comments related to the given task ID, and populate relevant fields
+    const comments = await Comment.find({ tasksId })
+      .populate("userId", "fullName") // Populate user details with only the fullName field
+      .populate({
+        path: "tasksId",
+        populate: {
+          path: "createrBy", // Populate the 'createrBy' field within the 'tasksId'
+          select: "fullName", // Select only the 'fullName' field from 'Account'
+        },
+      });
 
-    if (!comments || comments.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No comments found for this task." });
-    }
+    console.log("Retrieved comments successfully.");
+    res.status(200).json(comments); // Return the comments found
     console.log(comments);
-
-    res.status(200).json(comments); // Trả về bình luận tìm thấy
   } catch (error) {
     console.error("Error retrieving comments:", error);
     res.status(500).json({ message: "Server error." });

@@ -202,7 +202,15 @@ export const fetchAccount = async (id) => {
     const response = await axios.get(`${BASE_URL}/account/${id}`);
     return response.data;
   } catch (err) {
-    throw new Error(err.message);
+    // Ghi lại thông tin lỗi để kiểm tra
+    console.error("Error fetching account:", {
+      message: err.message,
+      response: err.response ? err.response.data : "No response data",
+      status: err.response ? err.response.status : "No status code",
+    });
+
+    // Ném lỗi với thông tin chi tiết hơn
+    throw new Error(`Failed to fetch account: ${err.message}`);
   }
 };
 
@@ -246,10 +254,20 @@ export const fetchCalendarData = async (date) => {
     throw error; // Ném lỗi để xử lý ở nơi gọi hàm
   }
 };
-// ////////////
-export const fetchInviteMembers = async () => {
+//
+export const fetchCalendar = async () => {
   try {
-    const response = await axios.post(`${BASE_URL}/invitemember`);
+    const response = await axios.get(`${BASE_URL}/getAllCalendering`);
+    return response.data; // Trả về dữ liệu từ API
+  } catch (error) {
+    console.error("Error fetching calendar data:", error);
+    throw error; // Ném lỗi để xử lý ở nơi gọi hàm
+  }
+};
+// ////////////
+export const fetchInviteMembers = async (userRole) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/invitemember/${userRole}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching invite members:", error);
