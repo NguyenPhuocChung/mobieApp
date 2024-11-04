@@ -18,45 +18,65 @@ import HomeLeader from "../leader/Home";
 const Leader = () => {
   const navigation = useNavigation();
   const [id, setId] = useState(null);
-  const [data, setData] = useState("");
-  const [modalVisible, setModalVisible] = useState(false); // Trạng thái modal
+  const [data, setData] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false); // Modal state
+  const [error, setError] = useState(null); // Error state for better handling
 
   const loadData = async () => {
     try {
       const idUser = await AsyncStorage.getItem("userId");
-      if (idUser) setId(idUser);
+      if (idUser) {
+        setId(idUser);
+      } else {
+        console.log("User ID is null or undefined");
+        setError("User ID is missing");
+      }
     } catch (error) {
       console.log("Error fetching data from AsyncStorage", error);
+      setError("Error fetching user ID from AsyncStorage");
     }
   };
 
   const fetch = async () => {
-    const accountData = await fetchAccount(id);
-    setData(accountData);
+    if (!id) {
+      console.log("ID is null or invalid");
+      setError("Invalid user ID. Unable to fetch account data.");
+      return;
+    }
+
+    try {
+      const accountData = await fetchAccount(id);
+      setData(accountData);
+      setError(null); // Clear error if fetch is successful
+    } catch (err) {
+      console.log("Error fetching account data", err);
+      setError(`Error fetching account: ${err.message}`);
+    }
   };
 
   useEffect(() => {
-    loadData(); // Gọi loadData để lấy id người dùng
+    loadData(); // Call loadData to fetch user ID
   }, []);
 
   useEffect(() => {
-    fetch(); // Gọi fetch sau khi id đã được tải
+    if (id) {
+      fetch(); // Fetch account data only if ID is valid
+    }
   }, [id]);
+
   const handleLogout = async () => {
     try {
-      // Xóa các thông tin đã lưu trong AsyncStorage
+      // Clear stored data in AsyncStorage
       await AsyncStorage.removeItem("userEmail");
       await AsyncStorage.removeItem("userRole");
       await AsyncStorage.removeItem("userPassword");
-
-      // Reset các state để không tự động đăng nhập lại
-
       console.log("Signed out");
 
-      // Chuyển hướng về màn hình Login
+      // Navigate to the Login screen
       navigation.navigate("Login");
     } catch (error) {
       console.log("Error clearing AsyncStorage during logout", error);
+      setError("Error during logout process");
     }
   };
 
@@ -92,6 +112,14 @@ const Leader = () => {
     </View>
   );
 
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
@@ -102,7 +130,7 @@ const Leader = () => {
 
         <View style={styles.titleContainer}>
           <Ionicons name="people-outline" size={24} style={styles.icon} />
-          <Text style={styles.projectTitle}>{data.fullName}</Text>
+          <Text style={styles.projectTitle}>{data?.fullName || "N/A"}</Text>
         </View>
 
         <TouchableOpacity>
@@ -119,19 +147,19 @@ const Leader = () => {
 
       <HomeLeader />
 
-      {/* Modal cho menu */}
+      {/* Modal for the menu */}
       <Modal
         animationType="fade"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => {
-          setModalVisible(false); // Đặt modal thành không hiển thị
+          setModalVisible(false); // Close modal
         }}
       >
         <TouchableOpacity
           style={styles.modalBackground}
-          activeOpacity={1} // Đảm bảo không có phản hồi khi nhấn vào background
-          onPress={() => setModalVisible(false)} // Đóng modal khi nhấn ra ngoài
+          activeOpacity={1} // Ensure no feedback when pressing the background
+          onPress={() => setModalVisible(false)} // Close modal when pressing outside
         >
           <View style={styles.modalContainer}>{renderModalContent()}</View>
         </TouchableOpacity>
@@ -194,11 +222,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     paddingLeft: 10,
   },
-  closeModal: {
-    marginTop: 20,
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    color: "red",
+    fontSize: 16,
     textAlign: "center",
-    color: "blue",
-    fontWeight: "bold",
   },
 });
 

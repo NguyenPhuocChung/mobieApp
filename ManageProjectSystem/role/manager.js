@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -18,54 +19,66 @@ import { fetchAccount } from "../api/apiservice";
 const Manager = () => {
   const navigation = useNavigation();
   const [id, setId] = useState(null);
-  const [data, setData] = useState(null); // Đặt giá trị mặc định là null
-  const [modalVisible, setModalVisible] = useState(false); // Trạng thái modal
+  const [data, setData] = useState(null); // Default value is null
+  const [loading, setLoading] = useState(true); // Loading state
+  const [modalVisible, setModalVisible] = useState(false); // Modal state
 
   const loadData = async () => {
     try {
       const idUser = await AsyncStorage.getItem("userId");
-      if (idUser) setId(idUser);
+      if (idUser) {
+        setId(idUser);
+      } else {
+        console.log("User ID is null or undefined");
+        Alert.alert("Error", "User ID is not available. Please log in again.");
+        setLoading(false);
+      }
     } catch (error) {
       console.log("Error fetching data from AsyncStorage", error);
+      Alert.alert("Error", "Failed to load user ID. Please try again.");
+      setLoading(false);
     }
   };
 
   const fetch = async () => {
     if (id) {
-      // Chỉ gọi khi id đã được thiết lập
       try {
+        setLoading(true);
         const accountData = await fetchAccount(id);
         setData(accountData);
+        setLoading(false);
       } catch (error) {
+        console.error("Error fetching account data:", error);
         Alert.alert(
           "Error",
           "Failed to fetch account data. Please try again later."
         );
-        console.error("Error fetching account data:", error);
+        setLoading(false);
       }
     }
   };
 
   useEffect(() => {
-    loadData(); // Gọi loadData để lấy id người dùng
+    loadData(); // Call loadData to fetch user ID
   }, []);
 
   useEffect(() => {
-    fetch(); // Gọi fetch sau khi id đã được tải
+    if (id) {
+      fetch(); // Fetch account data only if ID is valid
+    }
   }, [id]);
 
   const handleLogout = async () => {
     try {
-      // Xóa các thông tin đã lưu trong AsyncStorage
       await AsyncStorage.removeItem("userEmail");
       await AsyncStorage.removeItem("userRole");
       await AsyncStorage.removeItem("userPassword");
 
       console.log("Signed out");
-      // Chuyển hướng về màn hình Login
       navigation.navigate("Login");
     } catch (error) {
       console.log("Error clearing AsyncStorage during logout", error);
+      Alert.alert("Error", "Failed to log out. Please try again.");
     }
   };
 
@@ -101,6 +114,15 @@ const Manager = () => {
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
@@ -112,7 +134,7 @@ const Manager = () => {
         <View style={styles.titleContainer}>
           <Ionicons name="people-outline" size={24} style={styles.icon} />
           <Text style={styles.projectTitle}>
-            {data ? data.fullName : "Loading..."}
+            {data ? data.fullName : "No data available"}
           </Text>
         </View>
 
@@ -130,19 +152,19 @@ const Manager = () => {
 
       <HomeManager />
 
-      {/* Modal cho menu */}
+      {/* Modal for the menu */}
       <Modal
         animationType="fade"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => {
-          setModalVisible(false); // Đặt modal thành không hiển thị
+          setModalVisible(false); // Close modal
         }}
       >
         <TouchableOpacity
           style={styles.modalBackground}
-          activeOpacity={1} // Đảm bảo không có phản hồi khi nhấn vào background
-          onPress={() => setModalVisible(false)} // Đóng modal khi nhấn ra ngoài
+          activeOpacity={1} // Ensure no feedback when pressing the background
+          onPress={() => setModalVisible(false)} // Close modal when pressing outside
         >
           <View style={styles.modalContainer}>{renderModalContent()}</View>
         </TouchableOpacity>
@@ -205,11 +227,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     paddingLeft: 10,
   },
-  closeModal: {
-    marginTop: 20,
-    textAlign: "center",
-    color: "blue",
-    fontWeight: "bold",
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 
